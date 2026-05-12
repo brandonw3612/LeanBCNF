@@ -32,7 +32,7 @@ def is_BCNF_syn (R : Finset α) (F : Finset (FunctionalDependency α)) : Prop :=
 @[
   blueprint "theorem:BCNF-sem-eq-syn"
 ]
-lemma BCNF_sem_eq_syn {R : Finset α} {F : Finset (FunctionalDependency α)} :
+theorem BCNF_sem_eq_syn {R : Finset α} {F : Finset (FunctionalDependency α)} :
   is_BCNF R F ↔ is_BCNF_syn R F := by
   rw [is_BCNF, is_BCNF_syn]
   constructor
@@ -84,30 +84,30 @@ lemma BCNF_sem_eq_syn {R : Finset α} {F : Finset (FunctionalDependency α)} :
 @[
   blueprint "definition:BCNF-violator"
 ]
-def is_violator (X R : Finset α) (F : Finset (FunctionalDependency α)) : Prop :=
+def is_BCNF_violator (X R : Finset α) (F : Finset (FunctionalDependency α)) : Prop :=
     X ⊆ R ∧ attr_closure_proj F X R ≠ R ∧ attr_closure_proj F X R ≠ X
 
-instance decidable_is_violator (X R : Finset α) (F : Finset (FunctionalDependency α)) :
-  Decidable (is_violator X R F) := by
-  unfold is_violator
+instance decidable_is_BCNF_violator (X R : Finset α) (F : Finset (FunctionalDependency α)) :
+  Decidable (is_BCNF_violator X R F) := by
+  unfold is_BCNF_violator
   infer_instance
 
 @[
   blueprint "definition:find-BCNF-violators"
 ]
 def find_BCNF_violators (R : Finset α) (F : Finset (FunctionalDependency α)) : Finset (Finset α) :=
-    R.powerset.filter (fun X => is_violator X R F)
+    R.powerset.filter (fun X => is_BCNF_violator X R F)
 
 @[
   blueprint "lemma:decomposition-left-subset"
 ]
 lemma R1_subset_R {X R : Finset α} {F : Finset (FunctionalDependency α)}
-  (h_violator : is_violator X R F) :
+  (h_violator : is_BCNF_violator X R F) :
   attr_closure_proj F X R ⊂ R := by
   rw [Finset.ssubset_iff_subset_ne]
   constructor
   · exact attr_closure_proj_subset
-  · rw [is_violator] at h_violator
+  · rw [is_BCNF_violator] at h_violator
     rcases h_violator with ⟨_, h_xp_ne_R, _⟩
     trivial
 
@@ -115,9 +115,9 @@ lemma R1_subset_R {X R : Finset α} {F : Finset (FunctionalDependency α)}
   blueprint "lemma:decomposition-right-subset"
 ]
 lemma R2_subset_R {X R : Finset α} {F : Finset (FunctionalDependency α)}
-  (h_violator : is_violator X R F) :
+  (h_violator : is_BCNF_violator X R F) :
   (R \ attr_closure_proj F X R) ∪ X ⊂ R := by
-  rw [is_violator] at h_violator
+  rw [is_BCNF_violator] at h_violator
   rcases h_violator with ⟨h_X, _, h_xp_ne_X⟩
   rw [← Finset.sdiff_sdiff_eq_sdiff_union]
   · apply Finset.sdiff_ssubset
@@ -144,7 +144,7 @@ def is_picker_valid (picker : Finset (Finset α) → Option (Finset α)) : Prop 
   blueprint "lemma:BCNF-step-cover"
 ]
 lemma BCNF_step_cover {X R : Finset α} {F : Finset (FunctionalDependency α)}
-  (h_violator : is_violator X R F) :
+  (h_violator : is_BCNF_violator X R F) :
   attr_closure_proj F X R ∪ ((R \ attr_closure_proj F X R) ∪ X) = R := by
   rw [Finset.union_comm, Finset.union_assoc]
   nth_rw 2 [Finset.union_comm]
@@ -168,7 +168,7 @@ def BCNF_decompose
       | none => DecompositionTree.leaf R
       | some X =>
         if h_X : X ∈ violators then
-          have h_violator : is_violator X R F := by
+          have h_violator : is_BCNF_violator X R F := by
             dsimp [violators, find_BCNF_violators] at h_X
             exact (Finset.mem_filter.mp h_X).2
           let R₁ := attr_closure_proj F X R
@@ -184,7 +184,7 @@ decreasing_by
   blueprint "lemma:BCNF-step-intersection"
 ]
 lemma BCNF_step_intersection {X R : Finset α} {F : Finset (FunctionalDependency α)}
-  (h_violator : is_violator X R F) :
+  (h_violator : is_BCNF_violator X R F) :
   attr_closure_proj F X R ∩ (X ∪ (R \ attr_closure_proj F X R)) = X := by
   rcases h_violator with ⟨h_X, _, _⟩
   rw [Finset.inter_union_distrib_left]
@@ -234,7 +234,7 @@ lemma restrict_dom {α μ : Type} (t : α →. μ) {S : Set α} (h_sub : S ⊆ t
   blueprint "theorem:BCNF-decompose-step-is-lossless"
 ]
 theorem BCNF_decompose_step_is_lossless {X R : Finset α} {F : Finset (FunctionalDependency α)}
-  (h_violator : is_violator X R F) :
+  (h_violator : is_BCNF_violator X R F) :
   let d : Decomposition R := {
     left := attr_closure_proj F X R,
     right := (R \ attr_closure_proj F X R) ∪ X,
@@ -386,7 +386,7 @@ theorem BCNF_decompose_leaves_are_BCNF {R : Finset α} {F : Finset (FunctionalDe
     intro X h_X
     simp [find_BCNF_violators] at h_no_vlt
     have h_X_not_vlt := h_no_vlt h_X
-    simp [is_violator] at h_X_not_vlt
+    simp [is_BCNF_violator] at h_X_not_vlt
     apply h_X_not_vlt at h_X
     simp_all [imp_iff_not_or]
   | case2 _ vlts h_vlt => next h_pick_none =>
