@@ -351,9 +351,7 @@ theorem BCNF_decompose_is_lossless {R : Finset α} {F : Finset (FunctionalDepend
   (h_picker_valid : is_picker_valid picker) :
   (BCNF_decompose R F picker).is_lossless F := by
   rw [is_picker_valid] at h_picker_valid
-  induction R using BCNF_decompose.induct with
-  | F => exact F
-  | picker vlts => exact picker vlts
+  induction R using BCNF_decompose.induct F picker with
   | case1 _ vlts =>
     unfold BCNF_decompose DecompositionTree.is_lossless
     simp_all [vlts]
@@ -381,9 +379,7 @@ theorem BCNF_decompose_leaves_are_BCNF {R : Finset α} {F : Finset (FunctionalDe
   {picker : Finset (Finset α) → Option (Finset α)}
   (h_picker_valid : is_picker_valid picker) :
   all_are_BCNF (BCNF_decompose R F picker) F := by
-  induction R using BCNF_decompose.induct with
-  | F => exact F
-  | picker vlts => exact picker vlts
+  induction R using BCNF_decompose.induct F picker with
   | case1 _ vlts => next h_no_vlt =>
     simp_all [vlts, all_are_BCNF, BCNF_decompose, DecompositionTree.leaves]
     rw [BCNF_sem_eq_syn]
