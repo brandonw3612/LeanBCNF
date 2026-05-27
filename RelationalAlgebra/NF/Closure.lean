@@ -273,10 +273,11 @@ def attr_closure_weak (F : Finset (FunctionalDependency α)) (X : Finset α) : S
   blueprint "definition:left-filter"
   (title := /-- Left-Filter of FD Set -/)
   (statement := /--
-    We filter the set of functional dependencies $F$ to only include those whose
-    left-hand side is a subset of $X$. Formally,
+    We define a function $F_L(X)$ over a given attribute set $X$,
+    where we filter the set of functional dependencies $F$ to only include
+    those whose left-hand side is a subset of $X$. Formally,
     \[
-        \left\{ fd \in F \mid fd.lhs \subseteq X \right\}.
+        F_L(X) = \left\{ fd \in F \mid fd.lhs \subseteq X \right\}.
     \]
   -/)
 ]
@@ -453,27 +454,6 @@ theorem attr_closure_sound {F : Finset (FunctionalDependency α)} {X : Finset α
     · exact ih
     · simp [ac_seq_succ,attr_closure_step_sound]
 
-/-- An attribute set is a subset of its single-step closure set. -/
-@[
-  blueprint "lemma:subset-attr-closure-impl-step"
-  (title := /-- Subset of Attribute Closure (Step) -/)
-  (statement := /--
-    An attribute set is a subset of its single-step closure set. Formally,
-    \[
-        X \subseteq X'_F.
-    \]
-  -/)
-  (proof := /--
-    This proof is trivial since the original attribute set $X$ is included
-    in the result of the single step by definition.
-  -/)
-]
-lemma attr_closure_subset_step {F : Finset (FunctionalDependency α)} {X : Finset α} :
-  X ⊆ attr_closure_impl_step F X := by
-  intro a ha
-  simp [attr_closure_impl_step]
-  exact Or.inl ha
-
 /-- An attribute set is a subset of its closure. -/
 @[
   blueprint "lemma:subset-attr-closure-impl"
@@ -504,61 +484,35 @@ lemma attr_closure_subset_impl {F : Finset (FunctionalDependency α)} {X : Finse
     | zero => exact fun a ha => ha
     | succ n ih =>
       intro a ha
-      simp [ac_seq_succ]
-      exact attr_closure_subset_step (ih ha)
-
-/-- If `X ⊆ Y`, then the left-filter of `X` is a subset of the left-filter of `Y`. -/
-@[
-  blueprint "lemma:left-filter-mono"
-  (title := /-- Left-Filter Monotonicity -/)
-  (statement := /--
-    If $X \subseteq Y$, then the left-filter of $X$ is a subset of the left-filter of $Y$. Formally,
-    \[
-        X \subseteq Y \implies
-        \left\{ fd \in F \mid fd.lhs \subseteq X \right\}
-        \subseteq
-        \left\{ fd \in F \mid fd.lhs \subseteq Y \right\}.
-    \]
-  -/)
-]
-lemma filtered_mono {F : Finset (FunctionalDependency α)} {X Y : Finset α} (h : X ⊆ Y) :
-  left_filter F X ⊆ left_filter F Y := by
-  intro fd hfd
-  simp [left_filter, Finset.mem_filter] at hfd ⊢
-  constructor
-  · exact hfd.1
-  · exact subset_trans hfd.2 h
-
-/-- When left-filter reaches the fixed point, the single step also does. -/
-@[
-  blueprint "lemma:fixed-point-on-left-filter"
-]
-lemma fixed_of_filtered_eq {F : Finset (FunctionalDependency α)} {X : Finset α}
-  (h : left_filter F X = left_filter F (attr_closure_impl_step F X)) :
-  attr_closure_impl_step F (attr_closure_impl_step F X) = attr_closure_impl_step F X := by
-  rw [attr_closure_impl_step, ← h, attr_closure_impl_step]
-  simp
-
-/-- The closure extends monotonically with respect to the number of iterations. -/
-@[
-  blueprint "lemma:attr-closure-impl-iter-mono"
-]
-lemma seq_mono_step {F : Finset (FunctionalDependency α)} {X : Finset α} {n : ℕ} :
-  ac_seq F X n ⊆ ac_seq F X (n + 1) := by
-    simp [ac_seq_succ]
-    set XN := ac_seq F X n
-    exact attr_closure_subset_step
+      simp [ac_seq_succ, attr_closure_impl_step]
+      left
+      exact Finset.mem_of_subset ih ha
 
 /-- When the closure set stablizes at some point, it remains the same for all subsequent iterations. -/
 @[
   blueprint "lemma:stability-on-attr-closure-impl-iter"
+  (title := /-- Stability of Attribute Closure Iteration -/)
+  (statement := /--
+    When the closure set stablizes at some point, it remains the same for all subsequent iterations.
+    Formally, if $X^{k+1}_F = X^k_F$ for some $k$, then $X^n_F = X^k_F$ for all $n \geq k$.
+  -/)
+  (proof := /--
+    With $n \geq k$, we can express $n$ as $k + d$ for some $d \geq 0$.
+    We show the stability of the closure set by induction on $d$.
+
+    In the base case where $d = 0$, we have $n = k$, so the stability holds trivially.
+
+    In the inductive case, we assume that $X^{k+d}_F = X^k_F$ for some $d \geq 0$,
+    and we need to show that $X^{k+(d+1)}_F = X^k_F$.
+    Here, we use $X^{k+d}$ as the bridge to connect $X^{k+(d+1)}$ and $X^k$.
+    Combining the inductive hypothesis and the pre-condition that $X^{k+1}_F = X^k_F$,
+    we show that $X^{k+(d+1)}_F$ is equal to $X^k_F$.
+  -/)
 ]
 lemma seq_fixed_of_eq {F : Finset (FunctionalDependency α)} {X : Finset α} {k n : ℕ}
   (h : ac_seq F X (k + 1) = ac_seq F X k) (hn : k ≤ n) :
   ac_seq F X n = ac_seq F X k := by
-  have h_step : attr_closure_impl_step F (ac_seq F X k) = ac_seq F X k := by
-    rw [← ac_seq_succ]
-    exact h
+  have h_step : attr_closure_impl_step F (ac_seq F X k) = ac_seq F X k := by simp_all [← ac_seq_succ]
   obtain ⟨d, rfl⟩ := Nat.exists_eq_add_of_le hn
   induction d with
   | zero => rfl
@@ -566,26 +520,36 @@ lemma seq_fixed_of_eq {F : Finset (FunctionalDependency α)} {X : Finset α} {k 
     have heq : k + (d + 1) = k + d + 1 := by omega
     simp [heq, ac_seq_succ, ih, h_step]
 
-/-- Lower bound for strict monotonicity. -/
-@[
-  blueprint "lemma:card-left-filter-attr-closure-impl-iter-lower-bound"
-]
-lemma filtered_card_ge_succ (F : Finset (FunctionalDependency α)) (X : Finset α) (k : ℕ)
-  (h_strict : ∀ i < k, left_filter F (ac_seq F X i) ⊂ left_filter F (ac_seq F X (i + 1)))
-  (h_pos : 0 < (left_filter F (ac_seq F X 0)).card) :
-  k + 1 ≤ (left_filter F (ac_seq F X k)).card := by
-  induction k with
-  | zero => exact h_pos
-  | succ k ih =>
-    have h_sub : left_filter F (ac_seq F X k) ⊂ left_filter F (ac_seq F X (k + 1)) := h_strict k (Nat.lt_succ_self k)
-    have h_lt : (left_filter F (ac_seq F X k)).card < (left_filter F (ac_seq F X (k + 1))).card := Finset.card_lt_card h_sub
-    have h_prev : ∀ i < k, left_filter F (ac_seq F X i) ⊂ left_filter F (ac_seq F X (i + 1)) := fun i hi => h_strict i (Nat.lt_trans hi (Nat.lt_succ_self k))
-    have ih_val := ih h_prev
-    omega
-
 /-- The set of filtered dependencies cannot grow indefinitely. -/
 @[
   blueprint "lemma:exists-fixed-point-on-left-filter"
+  (title := /-- Existence of Fixed Point on Left-Filter -/)
+  (statement := /--
+    The set of filtered dependencies cannot grow indefinitely. Formally, if the left-filtered set
+    is non-empty at the beginning, then there exists some $k < |F|$ such that
+    the left-filtered set at step $k$ is the same as the left-filtered set at step $k + 1$:
+    \[
+        L_F(X) \neq \emptyset \implies \exists k < |F|, L_F(X^k_F) = L_F(X^{k+1}_F).
+    \]
+  -/)
+  (proof := /--
+    We prove this by contradiction. In this proof, we assume for the sake of contradiction that for every step $k < |F|$,
+    the left-filtered set at step $k$ is different from the left-filtered set at step $k + 1$,
+    \textit{i.e.}, $L_F(X^k_F) ≠ L_F(X^{k+1}_F)$.
+
+    First, we prove that for every $i < |F|$, $L_F(X^i_F) \subset L_F(X^{i+1}_F)$.
+    Specifically, if $fd \in L_F(X^i_F)$, then $fd.lhs \subseteq X^i_F \subseteq X^{i+1}_F$. Hence, $fd \in L_F(X^{i+1}_F)$.
+    Combining this with the contradiction assumption that $L_F(X^k_F) ≠ L_F(X^{k+1}_F)$ for all $k < |F|$,
+    we conclude that $L_F(X^i_F) \subset L_F(X^{i+1}_F)$ for every $i < |F|$.
+
+    Next, having the strict subset relation between the left-filtered sets for every step,
+    we show that the cardinality of the left-filtered set at each step is strictly increasing,
+    \textit{i.e.}, $|L_F(X)| = |L_F(X^0_F)| < |L_F(X^1_F)| < |L_F(X^2_F)| < \cdots < |L_F(X^{|F|}_F)|$.
+
+    By induction on $|F|$, we show that $|L_F(X^{|F|}_F)|$ is at least $|F| + 1$ using the inequality chain above. However,
+    for every $i \leq |F|$, $L_F(X^i_F)$ is a subset of $F$, so $|L_F(X^i_F)|$ is at most $|F|$.
+    This leads to a contradiction, and we conclude that there must exist some $k < |F|$ such that $L_F(X^k_F) = L_F(X^{k+1}_F)$.
+  -/)
 ]
 lemma exists_filtered_eq (F : Finset (FunctionalDependency α)) (X : Finset α)
   (h_pos : 0 < (left_filter F (ac_seq F X 0)).card) :
@@ -596,14 +560,41 @@ lemma exists_filtered_eq (F : Finset (FunctionalDependency α)) (X : Finset α)
     intro i hi
     have h_ne := h_contra i hi
     rw [Finset.ssubset_iff_subset_ne]
-    exact ⟨filtered_mono seq_mono_step, h_ne⟩
-  have h_bound := filtered_card_ge_succ F X F.card h_strict h_pos
+    constructor
+    · intro fd hfd
+      simp_all [left_filter]
+      obtain ⟨_, h⟩ := hfd
+      rw [ac_seq_succ, attr_closure_impl_step]
+      exact Finset.Subset.trans h Finset.subset_union_left
+    · exact h_ne
   have h_le : (left_filter F (ac_seq F X F.card)).card ≤ F.card := Finset.card_le_card (Finset.filter_subset _ _)
+  have h_bound : F.card + 1 ≤ (left_filter F (ac_seq F X F.card)).card := by
+    induction F.card with
+    | zero => tauto
+    | succ k ih =>
+      have hk : k < F.card := by
+        apply Nat.lt_of_succ_le
+        apply Nat.le_trans ih
+        apply Finset.card_le_card
+        exact Finset.filter_subset _ _
+      have h_sub := h_strict k hk
+      have h_lt := Finset.card_lt_card h_sub
+      omega
   omega
 
 /-- The closure reaches a fixed point at step `|F|`. -/
 @[
   blueprint "lemma:fixed-point-on-attr-closure-impl-iter"
+  (title := /-- Fixed Point of Attribute Closure Iteration -/)
+  (statement := /--
+    The closure reaches a fixed point at (or before) step $|F|$. Formally,
+    \[
+        X^{|F|+1}_F = X^{|F|}_F.
+    \]
+  -/)
+  (proof := /--
+
+  -/)
 ]
 lemma seq_stabilizes (F : Finset (FunctionalDependency α)) (X : Finset α) :
   ac_seq F X (F.card + 1) = ac_seq F X F.card := by
@@ -620,7 +611,9 @@ lemma seq_stabilizes (F : Finset (FunctionalDependency α)) (X : Finset α) :
     rw [ac_seq_succ] at hk_eq
     have h_eq : ac_seq F X (k + 2) = ac_seq F X (k + 1) := by
       simp [ac_seq_succ]
-      exact fixed_of_filtered_eq hk_eq
+      nth_rw 1 [attr_closure_impl_step]
+      rw [← hk_eq]
+      simp [attr_closure_impl_step]
     have h_all : ∀ n ≥ k + 1, ac_seq F X n = ac_seq F X (k + 1) := fun n hn => seq_fixed_of_eq h_eq hn
     have h1 : k + 1 ≤ F.card := hk_lt
     have h2 : k + 1 ≤ F.card + 1 := by omega
@@ -675,7 +668,7 @@ def counterexample_relation (U S : Finset α) : RelationInstance α Bool where
     intro t ht
     simp [Set.mem_insert_iff, Set.mem_singleton_iff] at ht
     ext x
-    rcases ht with rfl | rfl
+    rcases ht with rfl | rfl;
     · rfl
     · rfl
 
@@ -788,12 +781,9 @@ theorem armstrong_complete {F : Finset (FunctionalDependency α)} {f : Functiona
   -- Step 2: Define a universe U that contains all attributes from f and F.
   set U := X ∪ Y ∪ F.sup (fun fd => fd.lhs ∪ fd.rhs)
   have h_Y_sub_U : Y ⊆ U := by
+    unfold U
     intro a ha
-    apply Finset.mem_union.mpr
-    left
-    apply Finset.mem_union.mpr
-    right
-    exact ha
+    simp_all
   have h_F_sub_U : ∀ fd ∈ F, fd.lhs ⊆ U ∧ fd.rhs ⊆ U := by
     intro fd hfd
     constructor
