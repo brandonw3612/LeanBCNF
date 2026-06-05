@@ -26,7 +26,11 @@ jobs:
       - name: Install Graphviz dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y graphviz libgraphviz-dev
+          sudo apt-get install -y \
+            graphviz libgraphviz-dev \
+            texlive-latex-base texlive-latex-extra texlive-fonts-recommended \
+            texlive-fonts-extra texlive-science texlive-pictures \
+            ghostscript pdf2svg dvisvgm cm-super
 
       - name: Install elan
         run: |
