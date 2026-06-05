@@ -1,24 +1,21 @@
-# Formalizing Relational Algebra and its Equivalence to First-Order Logic in Lean
+# LeanBCNF: Formal Verification of the BCNF Decomposition Algorithm in Lean
 
-This repository contains the formalization code and supporting materials for my thesis project: **"Formalizing the Relational Algebra and Its Equivalence to First-Order Logic in the Lean Proof Assistant"**, conducted at Eindhoven University of Technology.
+This repository builds upon the foundational formalization of relational algebra ([Rickerd1234/RelationalAlgebra](https://github.com/Rickerd1234/RelationalAlgebra)) to implement and verify **Relational Database Normalization Theory** in the Lean 4 proof assistant. This work forms the core formalization for the Master's thesis, *Formal Verification of the BCNF Decomposition Algorithm in Lean*, conducted at Eindhoven University of Technology (TU/e).
 
-## 📚 Overview
+The primary objective of this project is to leverage dependent type theory to provide strict mathematical definitions and machine-checked proofs for functional dependencies, Armstrong's axioms, attribute closure computation, and the Boyce-Codd Normal Form (BCNF) decomposition algorithm, along with a *computable* and verified version of the final algorithm.
 
-Relational Algebra (RA) is the theoretical foundation of SQL and a cornerstone of database theory. It has a deep and well-understood connection to First-Order Logic (FOL), with known equivalences under active domain semantics.
+## Core Highlights
 
-This project formalizes:
++ **Functional Dependencies & Closures**: Formalizes the semantics of FDs, proves the soundness and completeness of Armstrong's Axioms, and implements a verified, terminating attribute closure algorithm.
 
-- The core constructs of Relational Algebra (i.e. selection, projection, join, renaming, union, difference).
-- A corresponding fragment of First-Order Logic with active domain semantics.
-- The expressive equivalence between RA and FOL under this interpretation.
++ **Keys & Superkeys**: Establishes the equivalence between the semantic definitions of keys and their syntactic computations.
 
-The formalization is developed in [Lean 4](https://leanprover.github.io), using its dependent type theory framework and the [mathlib4](https://github.com/leanprover-community/mathlib4) library where possible.
++ **Decomposition (Trees) & Losslessness**: Defines the conditions for lossless-join decompositions and provides the recursive data structures (Decomposition Trees) needed to represent them.
 
-## ✅ Goals
++ **Verified BCNF Algorithm**: Implements a standard BCNF decomposition algorithm mathematically (from the finite-set perspective) with end-to-end machine-checked guarantees.
 
-- ✅ Formalize relational algebra.
-- ✅ Formalize equivalent fragments of FOL.
-- ✅ Prove equivalence theorems between RA and FOL expressions.
-- 🔄 Ensure reusable and well-documented Lean definitions.
++ **Computable Equivalence**: Implements a computable version of the BCNF decomposition algorithm from the sequence (list) perspective, whose losslessness and BCNF compliance are also verified.
 
----
+## Documentation
+
+With the support of [LeanArchitect](https://github.com/hanwenzhu/LeanArchitect) and [Lean blueprint](https://github.com/PatrickMassot/leanblueprint), we have generated online documentation for the definitions and theorems in the codebase, available on the [GitHub Pages](https://brandonw3612.github.io/LeanBCNF) associated with this repository.
