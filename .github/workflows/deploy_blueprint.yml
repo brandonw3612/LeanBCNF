@@ -23,11 +23,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install Graphviz dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y graphviz libgraphviz-dev
-
       - name: Install elan
         run: |
           set -o pipefail
