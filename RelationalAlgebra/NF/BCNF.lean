@@ -137,8 +137,10 @@ lemma R2_subset_R {X R : Finset α} {F : Finset (FunctionalDependency α)}
 @[
   blueprint "definition:picker-valid"
 ]
-def is_picker_valid (picker : Finset (Finset α) → Option (Finset α)) : Prop :=
-  ∀ {violators : Finset (Finset α)}, violators = ∅ ∨ (∃ X, picker violators = some X) ∧ (∀ X, picker violators = some X → X ∈ violators)
+def is_picker_valid (F : Finset (FunctionalDependency α)) (picker : Finset α → Option (Finset α)) : Prop :=
+  ∀ {R : Finset α},
+  let violators := find_BCNF_violators R F;
+  violators = ∅ ∨ (∃ X, picker R = some X) ∧ (∀ {X}, picker R = some X → X ∈ violators)
 
 @[
   blueprint "lemma:BCNF-step-cover"
@@ -161,10 +163,10 @@ lemma BCNF_step_cover {X R : Finset α} {F : Finset (FunctionalDependency α)}
 ]
 def BCNF_decompose
   (R : Finset α) (F : Finset (FunctionalDependency α))
-  (picker : Finset (Finset α) → Option (Finset α)) : DecompositionTree R :=
+  (picker : Finset α → Option (Finset α)) : DecompositionTree R :=
     let violators := find_BCNF_violators R F
     if violators = ∅ then DecompositionTree.leaf R
-    else match picker violators with
+    else match picker R with
       | none => DecompositionTree.leaf R
       | some X =>
         if h_X : X ∈ violators then
@@ -347,10 +349,9 @@ theorem BCNF_decompose_step_is_lossless {X R : Finset α} {F : Finset (Functiona
   blueprint "theorem:BCNF-decompose-is-lossless"
 ]
 theorem BCNF_decompose_is_lossless {R : Finset α} {F : Finset (FunctionalDependency α)}
-  {picker : Finset (Finset α) → Option (Finset α)}
-  (h_picker_valid : is_picker_valid picker) :
+  {picker : Finset α → Option (Finset α)}
+  (h_picker_valid : is_picker_valid F picker) :
   (BCNF_decompose R F picker).is_lossless F := by
-  rw [is_picker_valid] at h_picker_valid
   induction R using BCNF_decompose.induct F picker with
   | case1 _ vlts =>
     unfold BCNF_decompose DecompositionTree.is_lossless
@@ -362,9 +363,10 @@ theorem BCNF_decompose_is_lossless {R : Finset α} {F : Finset (FunctionalDepend
     unfold BCNF_decompose DecompositionTree.is_lossless
     simp_all [vlts, R₁, R₂]
     exact BCNF_decompose_step_is_lossless h_X_vlt
-  | case4 _ _ h_vlt => next h_X' =>
-    obtain ⟨_, h_X'⟩ := h_picker_valid.resolve_left h_vlt
+  | case4 R _ h_vlt => next h_X' =>
+    obtain ⟨_, h_X'⟩ := (h_picker_valid (R := R)).resolve_left h_vlt
     simp_all
+    contradiction
 
 @[
   blueprint "definition:all-are-BCNF"
@@ -376,8 +378,8 @@ def all_are_BCNF {R : Finset α} (T : DecompositionTree R) (F : Finset (Function
   blueprint "theorem:BCNF-decompose-leaves-are-BCNF"
 ]
 theorem BCNF_decompose_leaves_are_BCNF {R : Finset α} {F : Finset (FunctionalDependency α)}
-  {picker : Finset (Finset α) → Option (Finset α)}
-  (h_picker_valid : is_picker_valid picker) :
+  {picker : Finset α → Option (Finset α)}
+  (h_picker_valid : is_picker_valid F picker) :
   all_are_BCNF (BCNF_decompose R F picker) F := by
   induction R using BCNF_decompose.induct F picker with
   | case1 _ vlts => next h_no_vlt =>
@@ -406,9 +408,10 @@ theorem BCNF_decompose_leaves_are_BCNF {R : Finset α} {F : Finset (FunctionalDe
     · next ih₂ =>
       rw [all_are_BCNF] at ih₂
       exact ih₂ h_L₂
-  | case4 _ _ h_vlt => next h_X' =>
-    obtain ⟨_, h_X'⟩ := h_picker_valid.resolve_left h_vlt
+  | case4 R _ h_vlt => next h_X' =>
+    obtain ⟨_, h_X'⟩ := (h_picker_valid (R := R)).resolve_left h_vlt
     simp_all
+    contradiction
 
 end NF
 
