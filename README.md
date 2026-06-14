@@ -14,7 +14,7 @@ The primary objective of this project is to leverage dependent type theory to pr
 
 + **Verified BCNF Algorithm**: Implements a standard BCNF decomposition algorithm mathematically (from the finite-set perspective) with end-to-end machine-checked guarantees.
 
-+ **Computable Equivalence**: Implements a computable version of the BCNF decomposition algorithm from the sequence (list) perspective, whose losslessness and BCNF compliance are also verified.
++ **Computable Equivalence**: Implements a computable version of the BCNF decomposition algorithm from the sequence (list) perspective, whose equivalence with the finite-set perspective is also proved.
 
 ## Documentation
 
