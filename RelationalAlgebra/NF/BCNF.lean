@@ -41,7 +41,7 @@ theorem BCNF_sem_eq_syn {R : Finset α} {F : Finset (FunctionalDependency α)} :
       rw [implies_proj, attr_closure_proj]
       constructor
       · apply armstrong_sound
-        exact Derives.transitivity attr_closure_sound (Derives.reflexivity Finset.inter_subset_left)
+        exact Derives.trans attr_closure_sound (Derives.rfl Finset.inter_subset_left)
       · constructor
         · trivial
         · simp
@@ -70,7 +70,7 @@ theorem BCNF_sem_eq_syn {R : Finset α} {F : Finset (FunctionalDependency α)} :
       · constructor
         · rw [attr_closure_proj, Finset.inter_eq_right] at h_rhs_eq_R
           apply armstrong_sound
-          apply Derives.transitivity attr_closure_sound (Derives.reflexivity h_rhs_eq_R)
+          apply Derives.trans attr_closure_sound (Derives.rfl h_rhs_eq_R)
         · simp_all
     · left
       rw [attr_closure_proj] at h_rhs_eq_lhs
@@ -316,7 +316,7 @@ theorem BCNF_decompose_step_is_lossless {X R : Finset α} {F : Finset (Functiona
         simp_all
       have h_f₁_dev : F ⊢ (X -> attr_closure_proj F X R) := by
         rw [attr_closure_proj]
-        exact Derives.transitivity attr_closure_sound (Derives.reflexivity Finset.inter_subset_left)
+        exact Derives.trans attr_closure_sound (Derives.rfl Finset.inter_subset_left)
       have h_f₁_imp : F ⊨ (X -> attr_closure_proj F X R) := armstrong_sound h_f₁_dev
       have h_f₁_holds : (X -> attr_closure_proj F X R : FunctionalDependency α).holds r := h_f₁_imp h_sat
       have h_agree_R₁ := h_f₁_holds h_u h_v h_agree_X

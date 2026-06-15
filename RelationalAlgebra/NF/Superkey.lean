@@ -47,7 +47,7 @@ theorem superkey_sem_eq_syn {K R : Finset α} {F : Finset (FunctionalDependency 
     · constructor
       · apply armstrong_sound
         rw [Finset.inter_eq_right] at h_ac
-        apply Derives.transitivity (attr_closure_sound) (Derives.reflexivity h_ac)
+        apply Derives.trans (attr_closure_sound) (Derives.rfl h_ac)
       simp
       trivial
   · intro ⟨h_k, ⟨h_imp, _⟩⟩
