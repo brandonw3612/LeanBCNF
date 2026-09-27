@@ -1,6 +1,7 @@
 import RelationalAlgebra.RelationalModel
 import RelationalAlgebra.RA.RelationalAlgebra
 import RelationalAlgebra.NF.FuncDep
+import RelationalAlgebra.NF.Closure
 
 import Mathlib.Data.Finset.Basic
 
@@ -48,7 +49,7 @@ theorem Decomposition.right_subset {R : Finset α} {d : Decomposition R} {r : Re
 ]
 def Decomposition.is_lossless {R : Finset α} (d : Decomposition R) (F : Finset (FunctionalDependency α)) : Prop :=
   ∀ {μ : Type} (r : RelationInstance α μ),
-    (h_r : r.schema = R) → r.satisfies F →
+    (h_r : r.schema = R) → sat_res_imp r F →
     r = join (projection r d.left (d.left_subset h_r)) (projection r d.right (d.right_subset h_r))
 
 @[
@@ -66,12 +67,46 @@ def DecompositionTree.leaves {R : Finset α} : DecompositionTree R → Finset (F
   | DecompositionTree.leaf R => {R}
   | DecompositionTree.node _ left right => left.leaves ∪ right.leaves
 
+def DecompositionTree.reconstruct {R : Finset α} {μ : Type}
+    (t : DecompositionTree R) (r : RelationInstance α μ) (h_r : r.schema = R)
+    : RelationInstance α μ :=
+  match t with
+  | DecompositionTree.leaf _ => r
+  | DecompositionTree.node d left right =>
+    let r_left := projection r d.left (d.left_subset h_r)
+    let r_right := projection r d.right (d.right_subset h_r)
+    join (DecompositionTree.reconstruct left r_left (by simp [r_left, projection]))
+         (DecompositionTree.reconstruct right r_right (by simp [r_right, projection]))
+
 @[
   blueprint "definition:decomposition-tree-is-lossless"
 ]
-def DecompositionTree.is_lossless {R : Finset α} : DecompositionTree R → Finset (FunctionalDependency α) → Prop
+def DecompositionTree.is_lossless {R : Finset α} (t : DecompositionTree R) (F : Finset (FunctionalDependency α)) : Prop :=
+  ∀ {μ : Type} (r : RelationInstance α μ),
+    (h_r : r.schema = R) → sat_res_imp r F →
+    r = t.reconstruct r h_r
+
+def DecompositionTree.is_lossless_syn {R : Finset α} : DecompositionTree R → Finset (FunctionalDependency α) → Prop
   | .leaf _, _ => True
   | .node d left right, F => d.is_lossless F ∧ left.is_lossless F ∧ right.is_lossless F
+
+theorem DecompositionTree.is_lossless_imp {R : Finset α} {t : DecompositionTree R} {F : Finset (FunctionalDependency α)} :
+  t.is_lossless_syn F → t.is_lossless F := by
+  induction t with
+  | leaf R =>
+    simp_all [DecompositionTree.is_lossless, DecompositionTree.reconstruct, DecompositionTree.is_lossless_syn]
+  | node d left right ih_left ih_right => next R =>
+    rw [DecompositionTree.is_lossless, DecompositionTree.is_lossless_syn]
+    intro ⟨h_d, h_left, h_right⟩ _ r h_r h_sat
+    simp [Decomposition.is_lossless] at h_d
+    have h_d := h_d r h_r h_sat
+    set r_left := projection r d.left (d.left_subset h_r)
+    set r_right := projection r d.right (d.right_subset h_r)
+    rw [DecompositionTree.is_lossless] at h_left h_right
+    have h_left := h_left r_left (by simp [r_left, projection]) (sat_res_imp_proj h_sat (d.left_subset h_r))
+    have h_right := h_right r_right (by simp [r_right, projection]) (sat_res_imp_proj h_sat (d.right_subset h_r))
+    rw [DecompositionTree.reconstruct, ←h_left, ←h_right]
+    exact h_d
 
 end NF
 

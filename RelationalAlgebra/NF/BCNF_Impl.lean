@@ -20,8 +20,8 @@ lemma find_BCNF_violator_exec_sound {R : List α} {F : Finset (FunctionalDepende
 def sublist_via_subset (R : List α) (S : Finset α) : List α :=
   R.filter (λ a => a ∈ S)
 
-lemma sublist_toFinset_eq_subset {R : List α} {R_sub : Finset α} (h_sub : R_sub ⊆ R.toFinset) :
-  (sublist_via_subset R R_sub).toFinset = R_sub := by
+lemma sublist_toFinset_eq_subset {R : List α} {S : Finset α} (h_sub : S ⊆ R.toFinset) :
+  (sublist_via_subset R S).toFinset = S := by
   simp [sublist_via_subset, Finset.filter_mem_eq_inter]
   trivial
 
@@ -31,11 +31,10 @@ lemma BCNF_exec_step_cover {R X : List α} {F : Finset (FunctionalDependency α)
   have R₂ := sublist_via_subset R ((R.toFinset \ attr_closure_proj F X.toFinset R.toFinset) ∪ X.toFinset);
   R₁.toFinset ∪ R₂.toFinset = R.toFinset := by
   intro R₁ R₂
-  rw [sublist_toFinset_eq_subset, sublist_toFinset_eq_subset]
-  apply BCNF_step_cover
-  · exact h_vlt
-  · exact HasSSubset.SSubset.subset (R2_subset_R h_vlt)
-  · exact HasSSubset.SSubset.subset (R1_subset_R h_vlt)
+  repeat rw [sublist_toFinset_eq_subset]
+  apply BCNF_step_cover h_vlt
+  · exact (R2_subset_R h_vlt).1
+  · exact (R1_subset_R h_vlt).1
 
 def BCNF_decompose_exec (R : List α) (F : Finset (FunctionalDependency α)) : DecompositionTree R.toFinset :=
   let R_finset := R.toFinset
@@ -48,18 +47,17 @@ def BCNF_decompose_exec (R : List α) (F : Finset (FunctionalDependency α)) : D
       exact find_BCNF_violator_exec_sound h_find
     let R₁ := sublist_via_subset R (attr_closure_proj F X.toFinset R_finset)
     let R₂ := sublist_via_subset R ((R_finset \ attr_closure_proj F X.toFinset R_finset) ∪ X.toFinset)
-    .node (Decomposition.mk R₁.toFinset R₂.toFinset (BCNF_exec_step_cover h_violator))
-          (BCNF_decompose_exec R₁ F)
-          (BCNF_decompose_exec R₂ F)
+    let d := Decomposition.mk R₁.toFinset R₂.toFinset (BCNF_exec_step_cover h_violator)
+    .node d (BCNF_decompose_exec R₁ F) (BCNF_decompose_exec R₂ F)
 termination_by R.toFinset.card
 decreasing_by
   · have h := R1_subset_R h_violator
     rw [← h_R] at h
-    rw [sublist_toFinset_eq_subset (HasSSubset.SSubset.subset h)]
+    rw [sublist_toFinset_eq_subset h.1]
     exact Finset.card_lt_card h
   · have h := R2_subset_R h_violator
     rw [← h_R] at h
-    rw [sublist_toFinset_eq_subset (HasSSubset.SSubset.subset h)]
+    rw [sublist_toFinset_eq_subset h.1]
     exact Finset.card_lt_card (R2_subset_R h_violator)
 
 noncomputable def list_based_picker (Universe : List α) (F : Finset (FunctionalDependency α))
@@ -81,9 +79,8 @@ lemma no_vlts_equiv {R : List α} {F : Finset (FunctionalDependency α)} :
     intro X h_X
     rw [find_BCNF_violators, Finset.mem_filter, Finset.mem_powerset] at h_X
     obtain ⟨h_sub, h_violator⟩ := h_X
-    let X_list := R.filter (λ a => a ∈ X)
-    have h_X_list_sublist : X_list.Sublist R := List.filter_sublist
-    have h_mem_sublists : X_list ∈ R.sublists := List.mem_sublists.mpr h_X_list_sublist
+    let X_list := sublist_via_subset R X
+    have h_mem_sublists : X_list ∈ R.sublists := List.mem_sublists.mpr List.filter_sublist
     have h_X_list_eq : X_list.toFinset = X := sublist_toFinset_eq_subset h_sub
     have h_not_violator_bool := List.find?_eq_none.mp h_exec_none X_list h_mem_sublists
     have h_not_violator : ¬ is_BCNF_violator X_list.toFinset R.toFinset F := by
@@ -105,9 +102,8 @@ lemma no_vlts_equiv {R : List α} {F : Finset (FunctionalDependency α)} :
 
 lemma list_based_picker_valid (Universe : List α) (F : Finset (FunctionalDependency α)):
   is_picker_valid F (list_based_picker Universe F) := by
-  unfold is_picker_valid list_based_picker
+  dsimp [is_picker_valid, list_based_picker]
   intro R_finset
-  dsimp only
   split
   · next h_sub =>
     let R_list := sublist_via_subset Universe R_finset
@@ -128,7 +124,7 @@ lemma list_based_picker_valid (Universe : List α) (F : Finset (FunctionalDepend
         have h_violator := find_BCNF_violator_exec_sound h_find
         simp only [find_BCNF_violators, Finset.mem_filter, Finset.mem_powerset]
         rw [h_R] at h_violator
-        exact ⟨h_violator.1, h_violator⟩
+        exact ⟨h_violator.1.1, h_violator⟩
   · next h_not_sub =>
     split
     · next h_empty =>
@@ -179,7 +175,6 @@ lemma BCNF_decompose_equiv_core {F : Finset (FunctionalDependency α)}
   | case1 R R_finset h_R h_none =>
     have h_exec : BCNF_decompose_exec R F = .leaf R.toFinset := by
       unfold BCNF_decompose_exec
-      dsimp
       split
       · rfl
       · next X h_find =>
@@ -190,7 +185,7 @@ lemma BCNF_decompose_equiv_core {F : Finset (FunctionalDependency α)}
       unfold BCNF_decompose
       simp [h_none]
     rw [h_exec, h_thry]
-  | case2 R R_finset h_R X h_find h_violator R₁ R₂ _ => next ih₁ ih₂ =>
+  | case2 R R_finset h_R X h_find h_violator R₁ R₂ => next ih₁ ih₂ =>
     subst R_finset
     have h_exec : BCNF_decompose_exec R F =
       .node (Decomposition.mk R₁.toFinset R₂.toFinset (BCNF_exec_step_cover h_violator))
@@ -205,8 +200,8 @@ lemma BCNF_decompose_equiv_core {F : Finset (FunctionalDependency α)}
         simp [h_find] at h_find'
         subst X' R₁ R₂
         rfl
-    have h_R₁ := HasSSubset.SSubset.subset (R1_subset_R h_violator)
-    have h_R₂ := HasSSubset.SSubset.subset (R2_subset_R h_violator)
+    have h_R₁ := (R1_subset_R h_violator).1
+    have h_R₂ := (R2_subset_R h_violator).1
     have h_thry : BCNF_decompose R.toFinset F picker =
       .node (Decomposition.mk R₁.toFinset R₂.toFinset (BCNF_exec_step_cover h_violator))
       (BCNF_decompose R₁.toFinset F picker) (BCNF_decompose R₂.toFinset F picker) := by
@@ -220,7 +215,7 @@ lemma BCNF_decompose_equiv_core {F : Finset (FunctionalDependency α)}
         have h_picker : picker R.toFinset = some X.toFinset := by
           unfold picker list_based_picker
           simp [h_sub, ← h_eq, h_find]
-        simp [h_picker, h_valid_vlt.2 h_picker]
+        simp [h_picker, h_valid_vlt.2 h_picker, BCNF_decompose_step]
         rw [sublist_toFinset_eq_subset h_R₁, sublist_toFinset_eq_subset h_R₂]
         trivial
     have h_R₁_sub_univ : R₁.toFinset ⊆ Universe.toFinset := by

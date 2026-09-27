@@ -36,16 +36,68 @@ def implies (F : Finset (FunctionalDependency α)) (f : FunctionalDependency α)
 infix:50 " ⊨ " => implies
 
 @[
-  blueprint "definition:fd-imp-proj"
-  (title := /-- Projection of FD Implication -/)
+  blueprint "definition:res-imp"
+  (title := /-- Restricted FD Implication -/)
   (statement := /--
-    When projected onto a schema $R$, a functional dependency $f$ is implied by
-    a set of functional dependencies $F$, if $F \vDash f$ and both
-    the left-hand side and right-hand side of $f$ are subsets of $R$.
+    A functional dependency $f$ is implied by $F$ restricted to schema $R$ if
+    $F \vDash f$ and every attribute in the left-hand side and right-hand side
+    of $f$ belongs to $R$.
   -/)
 ]
-def implies_proj (F : Finset (FunctionalDependency α)) (R : Finset α) (f : FunctionalDependency α) : Prop :=
-  implies F f ∧ f.lhs ⊆ R ∧ f.rhs ⊆ R
+def res_imp (F : Finset (FunctionalDependency α)) (R : Finset α) (f : FunctionalDependency α) : Prop :=
+  F ⊨ f ∧ f.lhs ⊆ R ∧ f.rhs ⊆ R
+
+@[
+  blueprint "definition:sat-res-imp"
+  (title := /-- Satisfaction of Restricted FD Implications -/)
+  (statement := /--
+    A relation instance $r$ satisfies the restricted implications of $F$ on its schema
+    if it satisfies every dependency $f$ such that $F \vDash f$ and both sides of $f$
+    are contained in $r$'s schema.
+  -/)
+]
+def sat_res_imp (r : RelationInstance α μ) (F : Finset (NF.FunctionalDependency α)) : Prop :=
+  ∀ {f}, res_imp F r.schema f → f.holds r
+
+@[
+  blueprint "definition:sat-res-imp-proj"
+  (title := /-- Restricted Satisfaction Is Preserved by Projection -/)
+  (statement := /--
+    If a relation instance $r$ satisfies every dependency implied by $F$
+    restricted to its schema, then its projection onto any subschema $S$
+    also satisfies every dependency implied by $F$ restricted to $S$.
+  -/)
+  (proof := /--
+  -/)
+]
+lemma sat_res_imp_proj {r : RelationInstance α μ} {F : Finset (NF.FunctionalDependency α)} {S : Finset α}
+  (h_r : sat_res_imp r F) (h_sub : S ⊆ r.schema) :
+  sat_res_imp (projection r S h_sub) F := by
+  unfold projection sat_res_imp
+  intro f h_f t₁ t₂ h_t₁ h_t₂ h_eq
+  simp at h_t₁ h_t₂
+  intro b h_b
+  obtain ⟨tt₁, ⟨h_tt₁, h_t₁⟩⟩ := h_t₁
+  obtain ⟨tt₂, ⟨h_tt₂, h_t₂⟩⟩ := h_t₂
+  by_cases h_b' : b ∈ S
+  · rw [(h_t₁ b).1 h_b', (h_t₂ b).1 h_b']
+    have h_match : ∀ a ∈ f.lhs, tt₁ a = tt₂ a := by
+      intro a h_a
+      have h_eq := h_eq a h_a
+      by_cases h_a' : a ∈ S
+      · rw [← (h_t₁ a).1 h_a', ← (h_t₂ a).1 h_a', h_eq]
+      · have h_f := h_f.2.1
+        tauto
+    have h_f_r : res_imp F r.schema f := by
+      rcases h_f with ⟨h_imp, h_lhs, h_rhs⟩
+      exact ⟨
+        h_imp,
+        fun a h_a => h_sub (h_lhs h_a),
+        fun a h_a => h_sub (h_rhs h_a)
+      ⟩
+    have h_f_sat := h_r h_f_r h_tt₁ h_tt₂
+    exact h_f_sat h_match b h_b
+  · rw [(h_t₁ b).2 h_b', (h_t₂ b).2 h_b']
 
 /-- Armstrong's axioms for functional dependencies. -/
 @[
@@ -225,33 +277,9 @@ theorem armstrong_sound {F : Finset (FunctionalDependency α)} {f : FunctionalDe
       exact h_xy_holds h_t₁ h_t₂ h_eq_x a h_a_in_y
     · trivial
 
-/-- `F⁺`: Closure of an FD set $F$. -/
-@[
-  blueprint "definition:fd-closure"
-  (title := /-- Functional Dependency Closure -/)
-  (statement := /--
-    The closure of a functional dependencies set $F$, denoted as $F^+$,
-    is the set of all functional dependencies that can be implied by $F$.
-  -/)
-]
-def func_dep_closure (F : Finset (FunctionalDependency α)) : Set (FunctionalDependency α) :=
-  {f | F ⊨ f}
-
-/-- Projection of the closure of an FD set $F$ onto a schema $R$. -/
-@[
-  blueprint "definition:fd-closure-proj"
-  (title := /-- Functional Dependency Closure Projection -/)
-  (statement := /--
-    The projection of the closure of a set of functional dependencies $F$
-    onto a schema $R$ is the set of all functional dependencies
-    that can be implied by $F$ and whose left-hand side and right-hand side
-    are both subsets of $R$.
-  -/)
-]
-def func_dep_closure_proj (F : Finset (FunctionalDependency α)) (R : Finset α) : Set (FunctionalDependency α) :=
-  {f | F ⊨ f ∧ f.lhs ⊆ R ∧ f.rhs ⊆ R}
-
-/-- `X⁺`: Closure of an attribute set `X` with respect to an FD set, `F`. (Weak definition as a Set.) -/
+/-- `X⁺`: the closure of an attribute set `X` with respect to an FD set `F`.
+    This is the weak set-based definition.
+-/
 @[
   blueprint "definition:attr-closure-weak"
   (title := /-- Attribute Closure (Weak) -/)
@@ -266,7 +294,7 @@ def func_dep_closure_proj (F : Finset (FunctionalDependency α)) (R : Finset α)
   -/)
 ]
 def attr_closure_weak (F : Finset (FunctionalDependency α)) (X : Finset α) : Set α :=
-  {a | (X -> {a} : FunctionalDependency α) ∈ func_dep_closure F}
+  {a | F ⊨ (X -> {a})}
 
 /-- Filtered set of FDs where `lhs` are subsets of `X`. -/
 @[
@@ -483,10 +511,8 @@ lemma attr_closure_subset_impl {F : Finset (FunctionalDependency α)} {X : Finse
   induction F.card with
     | zero => exact fun a ha => ha
     | succ n ih =>
-      intro a ha
       simp [ac_seq_succ, attr_closure_impl_step]
-      left
-      exact Finset.mem_of_subset ih ha
+      exact Finset.Subset.trans ih Finset.subset_union_left
 
 /-- When the closure set stablizes at some point, it remains the same for all subsequent iterations. -/
 @[
@@ -510,10 +536,10 @@ lemma attr_closure_subset_impl {F : Finset (FunctionalDependency α)} {X : Finse
   -/)
 ]
 lemma seq_fixed_of_eq {F : Finset (FunctionalDependency α)} {X : Finset α} {k n : ℕ}
-  (h : ac_seq F X (k + 1) = ac_seq F X k) (hn : k ≤ n) :
+  (h : ac_seq F X (k + 1) = ac_seq F X k) (h_n : k ≤ n) :
   ac_seq F X n = ac_seq F X k := by
   have h_step : attr_closure_impl_step F (ac_seq F X k) = ac_seq F X k := by simp_all [← ac_seq_succ]
-  obtain ⟨d, rfl⟩ := Nat.exists_eq_add_of_le hn
+  obtain ⟨d, rfl⟩ := Nat.exists_eq_add_of_le h_n
   induction d with
   | zero => rfl
   | succ d ih =>
@@ -551,7 +577,7 @@ lemma seq_fixed_of_eq {F : Finset (FunctionalDependency α)} {X : Finset α} {k 
     This leads to a contradiction, and we conclude that there must exist some $k < |F|$ such that $L_F(X^k_F) = L_F(X^{k+1}_F)$.
   -/)
 ]
-lemma exists_filtered_eq (F : Finset (FunctionalDependency α)) (X : Finset α)
+lemma exists_filtered_eq {F : Finset (FunctionalDependency α)} {X : Finset α}
   (h_pos : 0 < (left_filter F (ac_seq F X 0)).card) :
   ∃ k < F.card, left_filter F (ac_seq F X k) = left_filter F (ac_seq F X (k + 1)) := by
   by_contra h_contra
@@ -596,8 +622,8 @@ lemma exists_filtered_eq (F : Finset (FunctionalDependency α)) (X : Finset α)
 
   -/)
 ]
-lemma seq_stabilizes (F : Finset (FunctionalDependency α)) (X : Finset α) :
-  ac_seq F X (F.card + 1) = ac_seq F X F.card := by
+lemma seq_stabilizes {F : Finset (FunctionalDependency α)} {X : Finset α} {n : ℕ} :
+  ac_seq F X (F.card + n) = ac_seq F X F.card := by
   by_cases h_zero : (left_filter F (ac_seq F X 0)).card = 0
   · have h_empty : left_filter F (ac_seq F X 0) = ∅ := Finset.card_eq_zero.mp h_zero
     have h_eq : ac_seq F X 1 = ac_seq F X 0 := by
@@ -605,9 +631,9 @@ lemma seq_stabilizes (F : Finset (FunctionalDependency α)) (X : Finset α) :
       rw [ac_seq, Function.iterate_zero, id, left_filter] at h_empty
       simp [attr_closure_impl_step, left_filter, h_empty]
     have h_all : ∀ n ≥ 0, ac_seq F X n = ac_seq F X 0 := fun n hn => seq_fixed_of_eq h_eq hn
-    rw [h_all (F.card + 1) (Nat.zero_le _), h_all F.card (Nat.zero_le _)]
+    rw [h_all (F.card + n) (Nat.zero_le _), h_all F.card (Nat.zero_le _)]
   · have h_pos : 0 < (left_filter F (ac_seq F X 0)).card := Nat.pos_of_ne_zero h_zero
-    obtain ⟨k, hk_lt, hk_eq⟩ := exists_filtered_eq F X h_pos
+    obtain ⟨k, hk_lt, hk_eq⟩ := exists_filtered_eq h_pos
     rw [ac_seq_succ] at hk_eq
     have h_eq : ac_seq F X (k + 2) = ac_seq F X (k + 1) := by
       simp [ac_seq_succ]
@@ -616,8 +642,8 @@ lemma seq_stabilizes (F : Finset (FunctionalDependency α)) (X : Finset α) :
       simp [attr_closure_impl_step]
     have h_all : ∀ n ≥ k + 1, ac_seq F X n = ac_seq F X (k + 1) := fun n hn => seq_fixed_of_eq h_eq hn
     have h1 : k + 1 ≤ F.card := hk_lt
-    have h2 : k + 1 ≤ F.card + 1 := by omega
-    rw [h_all (F.card + 1) h2, h_all F.card h1]
+    have h2 : k + 1 ≤ F.card + n := by omega
+    rw [h_all (F.card + n) h2, h_all F.card h1]
 
 /-- The computed closure is closed under `F`: if an FD's LHS is in the closure, its RHS is also included. -/
 @[
@@ -629,7 +655,7 @@ lemma impl_closed {F : Finset (FunctionalDependency α)} {X : Finset α} :
   intro fd hfd h_lhs
   have h_fixed_point : attr_closure_impl_step F XP = XP := by
     simp [XP, attr_closure_impl, ← ac_seq_succ]
-    exact seq_stabilizes F X
+    exact seq_stabilizes
   have h_step : fd.rhs ⊆ attr_closure_impl_step F XP := by
     intro a ha
     simp [attr_closure_impl_step, left_filter, Finset.mem_union, Finset.mem_sup]
@@ -804,7 +830,7 @@ theorem armstrong_complete {F : Finset (FunctionalDependency α)} {f : Functiona
   have h_f_holds : f.holds r :=  h_implies h_sat
   -- Step 4: Prove X is a subset of its own closure S.
   have h_X_sub_S : X ⊆ S := attr_closure_subset_impl
-  -- Because f holds on the relation, and Y ⊆ S, it must be that Y ⊆ S.
+  -- Because f holds on the relation, and Y ⊆ U, it must be that Y ⊆ S.
   have h_Y_sub_S : Y ⊆ S := subset_of_closure_if_holds h_X_sub_S h_Y_sub_U h_f_holds
   -- Step 5: Derive f from the fact that its RHS is in the closure of its LHS.
   have h_S_sound : F ⊢ (X -> S) := attr_closure_sound
@@ -828,7 +854,7 @@ theorem armstrong_correct {F : Finset (FunctionalDependency α)} {f : Functional
 theorem attr_closure_impl_correct {F : Finset (FunctionalDependency α)} {X : Finset α} :
   attr_closure_impl F X = attr_closure_weak F X := by
   ext x
-  simp [attr_closure_weak, func_dep_closure, Set.mem_setOf_eq]
+  simp [attr_closure_weak, Set.mem_setOf_eq]
   constructor
   · intro h_x_in_impl
     apply armstrong_sound
@@ -884,8 +910,8 @@ theorem attr_closure_proj_subset {F : Finset (FunctionalDependency α)} {X R : F
   S -> T ∈ F⁺ **iff** T ⊆ S⁺.
 -/
 theorem func_dep_valid_via_attr_closure {F : Finset (FunctionalDependency α)} {fd : FunctionalDependency α} :
-  fd ∈ func_dep_closure F ↔ fd.rhs ⊆ attr_closure F fd.lhs := by
-  simp [attr_closure, func_dep_closure]
+  F ⊨ fd ↔ fd.rhs ⊆ attr_closure F fd.lhs := by
+  simp [attr_closure]
   set lc := attr_closure_impl F fd.lhs
   rw [← armstrong_correct]
   constructor
