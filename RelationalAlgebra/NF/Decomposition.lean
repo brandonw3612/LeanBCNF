@@ -49,7 +49,7 @@ theorem Decomposition.right_subset {R : Finset α} {d : Decomposition R} {r : Re
 ]
 def Decomposition.is_lossless {R : Finset α} (d : Decomposition R) (F : Finset (FunctionalDependency α)) : Prop :=
   ∀ {μ : Type} (r : RelationInstance α μ),
-    (h_r : r.schema = R) → sat_res_imp r F →
+    (h_r : r.schema = R) → r.sat_res_imp F →
     r = join (projection r d.left (d.left_subset h_r)) (projection r d.right (d.right_subset h_r))
 
 @[
@@ -82,9 +82,8 @@ def DecompositionTree.reconstruct {R : Finset α} {μ : Type}
   blueprint "definition:decomposition-tree-is-lossless"
 ]
 def DecompositionTree.is_lossless {R : Finset α} (t : DecompositionTree R) (F : Finset (FunctionalDependency α)) : Prop :=
-  ∀ {μ : Type} (r : RelationInstance α μ),
-    (h_r : r.schema = R) → sat_res_imp r F →
-    r = t.reconstruct r h_r
+  ∀ {μ : Type} {r : RelationInstance α μ},
+    (h_r : r.schema = R) → r.sat_res_imp F → r = t.reconstruct r h_r
 
 def DecompositionTree.is_lossless_syn {R : Finset α} : DecompositionTree R → Finset (FunctionalDependency α) → Prop
   | .leaf _, _ => True
@@ -103,8 +102,12 @@ theorem DecompositionTree.is_lossless_imp {R : Finset α} {t : DecompositionTree
     set r_left := projection r d.left (d.left_subset h_r)
     set r_right := projection r d.right (d.right_subset h_r)
     rw [DecompositionTree.is_lossless] at h_left h_right
-    have h_left := h_left r_left (by simp [r_left, projection]) (sat_res_imp_proj h_sat (d.left_subset h_r))
-    have h_right := h_right r_right (by simp [r_right, projection]) (sat_res_imp_proj h_sat (d.right_subset h_r))
+    have h_left_schema : r_left.schema = d.left := by simp [r_left, projection]
+    have h_right_schema : r_right.schema = d.right := by simp [r_right, projection]
+    have h_left_sat : r_left.sat_res_imp F := sat_res_imp_proj (d.left_subset h_r) h_sat
+    have h_right_sat : r_right.sat_res_imp F := sat_res_imp_proj (d.right_subset h_r) h_sat
+    have h_left := h_left h_left_schema h_left_sat
+    have h_right := h_right h_right_schema h_right_sat
     rw [DecompositionTree.reconstruct, ←h_left, ←h_right]
     exact h_d
 

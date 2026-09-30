@@ -27,8 +27,8 @@ lemma sublist_toFinset_eq_subset {R : List α} {S : Finset α} (h_sub : S ⊆ R.
 
 lemma BCNF_exec_step_cover {R X : List α} {F : Finset (FunctionalDependency α)}
   (h_vlt : is_BCNF_violator X.toFinset R.toFinset F) :
-  have R₁ := sublist_via_subset R (attr_closure_proj F X.toFinset R.toFinset);
-  have R₂ := sublist_via_subset R ((R.toFinset \ attr_closure_proj F X.toFinset R.toFinset) ∪ X.toFinset);
+  have R₁ := sublist_via_subset R (res_attr_closure F X.toFinset R.toFinset);
+  have R₂ := sublist_via_subset R ((R.toFinset \ res_attr_closure F X.toFinset R.toFinset) ∪ X.toFinset);
   R₁.toFinset ∪ R₂.toFinset = R.toFinset := by
   intro R₁ R₂
   repeat rw [sublist_toFinset_eq_subset]
@@ -45,8 +45,8 @@ def BCNF_decompose_exec (R : List α) (F : Finset (FunctionalDependency α)) : D
     have h_violator : is_BCNF_violator X.toFinset R_finset F := by
       rw [← h_R]
       exact find_BCNF_violator_exec_sound h_find
-    let R₁ := sublist_via_subset R (attr_closure_proj F X.toFinset R_finset)
-    let R₂ := sublist_via_subset R ((R_finset \ attr_closure_proj F X.toFinset R_finset) ∪ X.toFinset)
+    let R₁ := sublist_via_subset R (res_attr_closure F X.toFinset R_finset)
+    let R₂ := sublist_via_subset R ((R_finset \ res_attr_closure F X.toFinset R_finset) ∪ X.toFinset)
     let d := Decomposition.mk R₁.toFinset R₂.toFinset (BCNF_exec_step_cover h_violator)
     .node d (BCNF_decompose_exec R₁ F) (BCNF_decompose_exec R₂ F)
 termination_by R.toFinset.card

@@ -18,7 +18,7 @@ variable {α μ : Type} [DecidableEq α]
   blueprint "definition:superkey"
 ]
 def is_superkey (K R : Finset α) (F : Finset (FunctionalDependency α)) : Prop :=
-  K ⊆ R ∧ res_imp F R (K -> R)
+  K ⊆ R ∧ res_imp F (K -> R) R
 
 /-- Candidate key: minimal superkey of which no strict subset is a superkey. -/
 @[
@@ -32,14 +32,14 @@ def is_candidate_key (K R : Finset α) (F : Finset (FunctionalDependency α)) : 
   blueprint "definition:superkey-syn"
 ]
 def is_superkey_syn (K R : Finset α) (F : Finset (FunctionalDependency α)) : Prop :=
-  K ⊆ R ∧ attr_closure_proj F K R = R
+  K ⊆ R ∧ res_attr_closure F K R = R
 
 @[
   blueprint "theorem:superkey-sem-eq-syn"
 ]
 theorem superkey_sem_eq_syn {K R : Finset α} {F : Finset (FunctionalDependency α)} :
   is_superkey_syn K R F ↔ is_superkey K R F := by
-  simp_all [is_superkey, is_superkey_syn, res_imp, attr_closure_proj]
+  simp_all [is_superkey, is_superkey_syn, res_imp, res_attr_closure]
   rw [← armstrong_correct]
   intro h_k
   constructor
