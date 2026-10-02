@@ -7,3 +7,4 @@ import RelationalAlgebra.Equivalence.Equivalence
 
 import RelationalAlgebra.NF.Closure
 import RelationalAlgebra.NF.BCNF
+import RelationalAlgebra.NF.BCNF_Impl

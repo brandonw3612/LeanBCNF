@@ -18,19 +18,38 @@ namespace NF
 variable {α μ : Type} [DecidableEq α]
 
 @[
-  blueprint "definition:BCNF"
+  blueprint "def:BCNF"
+  (title := /-- Boyce-Codd Normal Form -/)
+  (statement := /--
+    A schema is in Boyce-Codd Normal Form (BCNF) with respect to a functional dependency set $F$ if
+    for every functional dependency $X \to Y$ that is implied by $F$ and whose attributes are in the
+    schema, either the dependency is trivial or the left-hand side ($X$) is a superkey.
+  -/)
 ]
 def is_BCNF (R : Finset α) (F : Finset (FunctionalDependency α)) : Prop :=
-    ∀ {f}, res_imp F f R → f.is_trivial ∨ is_superkey f.lhs R F
+    ∀ {f}, res_imp F f R → f.is_trivial ∨ is_superkey_syn f.lhs R F
 
 @[
-  blueprint "definition:BCNF-syn"
+  blueprint "def:BCNF-syn"
+  (title := /-- Boyce-Codd Normal Form (Syntactic) -/)
+  (statement := /--
+    We translate the BCNF definition to a computable form: A schema is in Boyce-Codd Normal Form
+    (BCNF) with respect to a functional dependency set $F$ if for every subset of attributes $X$ of
+    the schema, the closure of $X$ under $F$ restricted to the schema $R$ is either the entire
+    schema $R$ or $X$ itself.
+  -/)
 ]
 def is_BCNF_syn (R : Finset α) (F : Finset (FunctionalDependency α)) : Prop :=
     ∀ {X}, X ⊆ R → res_attr_closure F X R = R ∨ res_attr_closure F X R = X
 
 @[
-  blueprint "theorem:BCNF-sem-eq-syn"
+  blueprint "thm:BCNF-sem-eq-syn"
+  (title := /-- BCNF Semantic/Syntactic Equivalence -/)
+  (statement := /--
+    We establish the equivalence between the semantic and syntactic definitions of BCNF: A schema is
+    in Boyce-Codd Normal Form (BCNF) with respect to a functional dependency set $F$ if and only if
+    it satisfies the syntactic condition.
+  -/)
 ]
 theorem BCNF_sem_eq_syn {R : Finset α} {F : Finset (FunctionalDependency α)} :
   is_BCNF R F ↔ is_BCNF_syn R F := by
@@ -47,24 +66,33 @@ theorem BCNF_sem_eq_syn {R : Finset α} {F : Finset (FunctionalDependency α)} :
       rw [subset_antisymm_iff]
       simp_all [subset_res_attr_closure h_X]
     · left
-      rw [← superkey_sem_eq_syn, is_superkey_syn] at h_superkey
+      rw [is_superkey_syn] at h_superkey
       simp_all
   · intro h_syn f h_imp
     rw [res_imp] at h_imp
     rcases h_imp with ⟨h_imp, ⟨h_lhs, h_rhs⟩⟩
     rcases h_syn h_lhs with h_rhs_eq_R | h_rhs_eq_lhs
     · right
-      simp_all [← superkey_sem_eq_syn, is_superkey_syn]
+      simp_all [is_superkey_syn]
     · left
       rw [res_attr_closure] at h_rhs_eq_lhs
       rw [FunctionalDependency.is_trivial, ← h_rhs_eq_lhs, Finset.subset_inter_iff]
       exact ⟨attr_closure_complete (armstrong_complete h_imp), h_rhs⟩
 
 @[
-  blueprint "definition:BCNF-violator"
+  blueprint "def:BCNF-violator"
+  (title := /-- BCNF Violator -/)
+  (statement := /--
+    An attribute set $X$ is a BCNF violator for a schema $R$ with respect to a functional dependency
+    set $F$ if $X$ is a proper subset of $R$, the attribute closure of $X$ under $F$ restricted to
+    $R$ is a proper subset of $R$, and $X$ is a proper subset of the closure. Formally,
+    \[
+      X^+_R \subsetneq R \quad \text{and} \quad X \subsetneq X^+_R.
+    \]
+  -/)
 ]
 def is_BCNF_violator (X R : Finset α) (F : Finset (FunctionalDependency α)) : Prop :=
-    X ⊂ R ∧ res_attr_closure F X R ⊂ R ∧ X ⊂ res_attr_closure F X R
+    res_attr_closure F X R ⊂ R ∧ X ⊂ res_attr_closure F X R
 
 instance decidable_is_BCNF_violator (X R : Finset α) (F : Finset (FunctionalDependency α)) :
   Decidable (is_BCNF_violator X R F) := by
@@ -72,11 +100,23 @@ instance decidable_is_BCNF_violator (X R : Finset α) (F : Finset (FunctionalDep
   infer_instance
 
 @[
-  blueprint "definition:find-BCNF-violators"
+  blueprint "def:find-BCNF-violators"
+  (title := /-- Find BCNF Violators -/)
+  (statement := /--
+    This function takes a schema $R$ and a set of functional dependencies $F$ as input, and returns
+    the set of all subsets of $R$ that are BCNF violators for $R$ with respect to $F$.
+  -/)
 ]
 def find_BCNF_violators (R : Finset α) (F : Finset (FunctionalDependency α)) : Finset (Finset α) :=
     R.powerset.filter (fun X => is_BCNF_violator X R F)
 
+@[
+  blueprint "lem:BCNF-iff-no-violators"
+  (statement := /--
+    A schema $R$ is in Boyce-Codd Normal Form (BCNF) with respect to a set of functional dependencies
+    $F$ if and only if there are no BCNF violators for $R$ with respect to $F$.
+  -/)
+]
 lemma BCNF_iff_no_violators (R : Finset α) (F : Finset (FunctionalDependency α)) :
   is_BCNF R F ↔ find_BCNF_violators R F = ∅ := by
   simp [BCNF_sem_eq_syn, is_BCNF_syn, find_BCNF_violators]
@@ -99,11 +139,20 @@ lemma BCNF_iff_no_violators (R : Finset α) (F : Finset (FunctionalDependency α
     · by_contra h_contra
       push_neg at h_contra
       simp [Finset.ssubset_iff_subset_ne] at h_X_not_vlt
-      have h := h_X_not_vlt h_X h res_attr_closure_subset h_contra.1 (subset_res_attr_closure h_X)
+      have h := h_X_not_vlt res_attr_closure_subset h_contra.1 (subset_res_attr_closure h_X)
       tauto
 
 @[
-  blueprint "lemma:BCNF-step-cover"
+  blueprint "lem:BCNF-step-cover"
+  (statement := /--
+    In a bianry BCNF decomposition over a schema $R$ with respect to a functional dependency set
+    $F$, if $X$ is found to be a BCNF violator, then the union of the left sub-schema $R_1 = X^+_R$
+    and the right sub-schema $R_2 = (R \setminus X^+_R) \cup X$ is equal to the original schema $R$.
+    Formally,
+    \[
+      R_1 \cup R_2 = X^+_R \cup ((R \setminus X^+_R) \cup X) = R.
+    \]
+  -/)
 ]
 lemma BCNF_step_cover {X R : Finset α} {F : Finset (FunctionalDependency α)}
   (h_violator : is_BCNF_violator X R F) :
@@ -114,10 +163,20 @@ lemma BCNF_step_cover {X R : Finset α} {F : Finset (FunctionalDependency α)}
   have h_R_ac_eq_R : R ∪ res_attr_closure F X R = R := by
     rw [Finset.union_eq_left]
     exact res_attr_closure_subset
-  rcases h_violator with ⟨h_X, _⟩
   rw [h_R_ac_eq_R, Finset.union_eq_right]
-  exact h_X.1
+  exact Finset.Subset.trans h_violator.2.1 h_violator.1.1
 
+@[
+  blueprint "def:BCNF-decomp-step"
+  (title := /-- BCNF Decomposition: Single Step -/)
+  (statement := /--
+    When a BCNF violator $X$ is found in a schema $R$ with respect to a functional dependency set
+    $F$, we can perform a single step of BCNF decomposition. This step produces two sub-schemas:
+    the left sub-schema $R_1 = X^+_R$ and the right sub-schema $R_2 = (R \setminus X^+_R) \cup X$. This
+    function returns a `Decomposition` object (see \cref{def:decomp}) describing the original schema
+    and the decomposed sub-schemas.
+  -/)
+]
 def BCNF_decompose_step (X R : Finset α) (F : Finset (FunctionalDependency α))
   (h_violator : is_BCNF_violator X R F) : Decomposition R :=
     let R₁ := res_attr_closure F X R
@@ -125,23 +184,30 @@ def BCNF_decompose_step (X R : Finset α) (F : Finset (FunctionalDependency α))
     Decomposition.mk R₁ R₂ (BCNF_step_cover h_violator)
 
 @[
-  blueprint "lemma:decomposition-left-subset"
+  blueprint "lem:BCNF-decomp-left-subset"
+  (statement := /--
+    The left sub-schema $R_1 = X^+_R$ is a subset of the original schema $R$ by definition of the BCNF
+    decomposition step.
+  -/)
 ]
 lemma R1_subset_R {X R : Finset α} {F : Finset (FunctionalDependency α)}
   (h_violator : is_BCNF_violator X R F) :
-  res_attr_closure F X R ⊂ R := by
-  rw [is_BCNF_violator] at h_violator
-  exact h_violator.2.1
+  res_attr_closure F X R ⊂ R := h_violator.1
 
 @[
-  blueprint "lemma:decomposition-right-subset"
+  blueprint "lem:BCNF-decomp-right-subset"
+  (statement := /--
+    The right sub-schema $R_2 = (R \setminus X^+_R) \cup X$ is a subset of the original schema $R$
+    by definition of the BCNF decomposition step.
+  -/)
 ]
 lemma R2_subset_R {X R : Finset α} {F : Finset (FunctionalDependency α)}
   (h_violator : is_BCNF_violator X R F) :
   (R \ res_attr_closure F X R) ∪ X ⊂ R := by
   rw [is_BCNF_violator] at h_violator
-  have ⟨h_X, _, h_xp_ne_X⟩ := h_violator
-  rw [← Finset.sdiff_sdiff_eq_sdiff_union h_X.1]
+  have ⟨_, h_xp_ne_X⟩ := h_violator
+  have h_X := Finset.Subset.trans h_violator.2.1 h_violator.1.1
+  rw [← Finset.sdiff_sdiff_eq_sdiff_union h_X]
   apply Finset.sdiff_ssubset
   · exact Finset.Subset.trans Finset.sdiff_subset res_attr_closure_subset
   · rw [Finset.sdiff_nonempty]
@@ -149,24 +215,30 @@ lemma R2_subset_R {X R : Finset α} {F : Finset (FunctionalDependency α)}
     exact h_xp_ne_X.2
 
 @[
-  blueprint "lemma:BCNF-step-intersection"
+  blueprint "lem:BCNF-decomp-step-intersection"
+  (statement := /--
+    In a binary BCNF decomposition over a schema $R$ with respect to a functional dependency set
+    $F$, if $X$ is found to be a BCNF violator, then the intersection of the left sub-schema $R_1 =
+    X^+_R$ and the right sub-schema $R_2 = (R \setminus X^+_R) \cup X$ is equal to the original
+    violator $X$. Formally,
+    \[
+      R_1 \cap R_2 = X^+_R \cap ((R \setminus X^+_R) \cup X) = X.
+    \]
+  -/)
 ]
 lemma BCNF_step_intersection {X R : Finset α} {F : Finset (FunctionalDependency α)}
   (h_violator : is_BCNF_violator X R F) :
   let d := BCNF_decompose_step X R F h_violator;
   d.left ∩ d.right = X := by
-  rcases h_violator with ⟨h_X, _, _⟩
+  have h_X := Finset.Subset.trans h_violator.2.1 h_violator.1.1
   dsimp [BCNF_decompose_step]
   rw [Finset.inter_union_distrib_left]
   have h_acX_eq_X : res_attr_closure F X R ∩ X = X := by
     rw [Finset.inter_eq_right]
-    exact subset_res_attr_closure h_X.1
+    exact subset_res_attr_closure h_X
   rw [h_acX_eq_X, Finset.inter_sdiff_self]
   simp
 
-@[
-  blueprint "lemma:restrict-apply-correct"
-]
 lemma restrict_apply_correct {α : Type} {f : α →. μ} {S : Set α} (h_ST : S ⊆ f.Dom) :
   ∀ (a : α), (a ∈ S → f.restrict h_ST a = f a) ∧ (a ∉ S → f.restrict h_ST a = Part.none) := by
   intro a
@@ -177,28 +249,33 @@ lemma restrict_apply_correct {α : Type} {f : α →. μ} {S : Set α} (h_ST : S
     simp [PFun.mem_restrict, h_a]
   }
 
-@[
-  blueprint "lemma:restrict-dom"
-]
 lemma restrict_dom {α μ : Type} (t : α →. μ) {S : Set α} (h_sub : S ⊆ t.Dom) :
     (t.restrict h_sub).Dom = S := by
     unfold PFun.restrict Part.restrict
     simp
 
 @[
-  blueprint "theorem:BCNF-decompose-step-is-lossless"
+  blueprint "thm:BCNF-decomp-step-lossless"
+  (title := /-- BCNF Decomposition: Single Step Losslessness-/)
+  (statement := /--
+    The binary decomposition $d$ generated by a single step of BCNF decomposition is lossless with
+    respect to any relation instance $r$ with schema $R$ that satisfies the functional dependency
+    set $F$.
+  -/)
 ]
 theorem BCNF_decompose_step_is_lossless {X R : Finset α} {F : Finset (FunctionalDependency α)}
   (h_violator : is_BCNF_violator X R F) :
-  (BCNF_decompose_step X R F h_violator).is_lossless F := by
+  ∀ {r : RelationInstance α μ}, (h_r : r.schema = R) → (h_sat : r.sat_res_imp F) →
+  (BCNF_decompose_step X R F h_violator).is_lossless h_r := by
   set R₁ := res_attr_closure F X R
   set R₂ := (R \ res_attr_closure F X R) ∪ X
   dsimp [BCNF_decompose_step, Decomposition.is_lossless]
-  have h_X_subset_R₁ : X ⊆ R₁ := subset_res_attr_closure h_violator.1.1
+  have h_X := Finset.Subset.trans h_violator.2.1 h_violator.1.1
+  have h_X_subset_R₁ : X ⊆ R₁ := subset_res_attr_closure h_X
   have h_X_subset_R₂ : X ⊆ R₂ := Finset.subset_union_right
-  intro μ r h_r h_sat
+  intro r h_r h_sat
   apply RelationInstance.ext
-  · simp only [join, projection]
+  · simp [join, projection]
     rw [BCNF_step_cover h_violator, h_r]
   · apply Set.Subset.antisymm
     · rw [Set.subset_def]
@@ -209,7 +286,7 @@ theorem BCNF_decompose_step_is_lossless {X R : Finset α} {F : Finset (Functiona
       let t1 := t.restrict h_R1_sub_R
       have h_R2_sub_R : ↑R₂ ⊆ t.Dom := by
         rw [r.validSchema t h_t, Finset.coe_subset, h_r]
-        exact Finset.union_subset Finset.sdiff_subset h_violator.1.1
+        exact Finset.union_subset Finset.sdiff_subset h_X
       let t2 := t.restrict h_R2_sub_R
       use t1
       constructor
@@ -240,7 +317,7 @@ theorem BCNF_decompose_step_is_lossless {X R : Finset α} {F : Finset (Functiona
     · rw [Set.subset_def]
       intro t h_t
       simp only[join, projection] at h_t
-      have h_X := h_violator.1
+      have h_X := Finset.Subset.trans h_violator.2.1 h_violator.1.1
       rcases h_t with ⟨t₁, h_t₁, t₂, h_t₂, h_agree⟩
       have h_t₁_dom : t₁.Dom = R₁ := by
         apply projectionDom r h_t₁
@@ -274,8 +351,8 @@ theorem BCNF_decompose_step_is_lossless {X R : Finset α} {F : Finset (Functiona
         exact Derives.trans attr_closure_sound (Derives.rfl Finset.inter_subset_left)
       have h_f_imp : F ⊨ f := armstrong_sound h_f_dev
       have h_f_res_imp : res_imp F f r.schema := by
-        simp_all [res_imp, f]
-        exact ⟨h_X.1, res_attr_closure_subset⟩
+        simp_all [res_imp, f, R₁]
+        exact (R1_subset_R h_violator).1
       have h_f₁_holds : f.holds r := h_sat h_f_res_imp
       have h_agree_R₁ := h_f₁_holds h_u h_v h_agree_X
       have h_t_eq_v : t = v := by
@@ -305,7 +382,12 @@ theorem BCNF_decompose_step_is_lossless {X R : Finset α} {F : Finset (Functiona
       simp_all
 
 @[
-  blueprint "definition:picker-valid"
+  blueprint "def:picker-valid"
+  (statement := /--
+    For a given BCNF violator picker function, we define a validity condition that ensures the
+    picker function always returns a valid BCNF violator from the set of violators when there are
+    any.
+  -/)
 ]
 def is_picker_valid (F : Finset (FunctionalDependency α)) (picker : Finset α → Option (Finset α)) : Prop :=
   ∀ {R : Finset α},
@@ -313,10 +395,23 @@ def is_picker_valid (F : Finset (FunctionalDependency α)) (picker : Finset α �
   violators = ∅ ∨ (∃ X, picker R = some X) ∧ (∀ {X}, picker R = some X → X ∈ violators)
 
 @[
-  blueprint "definition:BCNF-decompose"
+  blueprint "def:BCNF-decompose"
+  (title := /-- BCNF Decomposition -/)
+  (statement := /--
+    We describe the complete BCNF decomposition algorithm as a recursive function that takes a
+    schema $R$, a set of functional dependencies $F$ and a picker function $p$ as input. The
+    function checks for BCNF violators in the schema $R$ with respect to $F$. If there are no
+    violators, it returns a leaf node that contains the entire schema $R$ as the final decomposition
+    tree. Otherwise, if the picker selects a valid BCNF violator $X$, it performs a single step of
+    the procedure to obtain a binary decomposition object and recursively decomposes the left and
+    right sub-schemas to obtain two sub-trees. These artifacts are then combined into a
+    decomposition tree node, which is returned as the final result. We provide a termination
+    measure based on the cardinality of the schema $R$ to ensure that the recursive calls eventually
+    reach a base case, guaranteeing that the algorithm terminates. The decreasing measure is based
+    on the fact that the left and right sub-schemas are proper subsets of the input schema.
+  -/)
 ]
-def BCNF_decompose
-  (R : Finset α) (F : Finset (FunctionalDependency α))
+def BCNF_decompose (R : Finset α) (F : Finset (FunctionalDependency α))
   (picker : Finset α → Option (Finset α)) : DecompositionTree R :=
     let violators := find_BCNF_violators R F
     if violators = ∅ then DecompositionTree.leaf R
@@ -338,13 +433,20 @@ decreasing_by
   · exact Finset.card_lt_card (R2_subset_R h_violator)
 
 @[
-  blueprint "theorem:BCNF-decompose-is-lossless"
+  blueprint "thm:BCNF-decomp-lossless-syn"
+  (statement := /--
+    We prove that the BCNF decomposition algorithm is lossless syntactically (see
+    \cref{def:decomp-tree-lossless-syn}) by showing that all binary decomposition nodes throughout
+    the entire decomposition tree are lossless with respect to any relation instance $r$ with schema
+    $R$ that satisfies the functional dependency set $F$.
+  -/)
 ]
 theorem BCNF_decompose_is_lossless_syn {R : Finset α} {F : Finset (FunctionalDependency α)}
-  {picker : Finset α → Option (Finset α)}
-  (h_picker_valid : is_picker_valid F picker) :
-  (BCNF_decompose R F picker).is_lossless_syn F := by
-  induction R using BCNF_decompose.induct F picker with
+  {picker : Finset α → Option (Finset α)} (h_picker_valid : is_picker_valid F picker) :
+  ∀ {r : RelationInstance α μ}, (h_r : r.schema = R) → (h_sat : r.sat_res_imp F) →
+  (BCNF_decompose R F picker).is_lossless_syn h_r := by
+  intro r h_r h_sat
+  induction R using BCNF_decompose.induct F picker generalizing r with
   | case1 _ vlts =>
     unfold BCNF_decompose DecompositionTree.is_lossless_syn
     simp_all [vlts]
@@ -356,36 +458,57 @@ theorem BCNF_decompose_is_lossless_syn {R : Finset α} {F : Finset (FunctionalDe
     simp_all [vlts, R₁, R₂]
     set t₁ := BCNF_decompose (res_attr_closure F X R) F picker
     set t₂ := BCNF_decompose ((R \ res_attr_closure F X R) ∪ X) F picker
-    have ih₁ : t₁.is_lossless F := t₁.is_lossless_imp ih₁
-    have ih₂ : t₂.is_lossless F := t₂.is_lossless_imp ih₂
-    exact ⟨BCNF_decompose_step_is_lossless h_X_vlt, ⟨ih₁, ih₂⟩⟩
+    set r₁ := projection r R₁ (by simp [R₁, h_r, (R1_subset_R h_X_vlt).1])
+    set r₂ := projection r R₂ (by simp [R₂, h_r, (R2_subset_R h_X_vlt).1])
+    have h_r₁ : r₁.schema = R₁ := by simp [r₁, projection]
+    have h_r₂ : r₂.schema = R₂ := by simp [r₂, projection]
+    have h_r₁_sat : r₁.sat_res_imp F := by
+      apply sat_res_imp_proj
+      exact h_sat
+    have h_r₂_sat : r₂.sat_res_imp F := by
+      apply sat_res_imp_proj
+      exact h_sat
+    have ih₁ := ih₁ h_r₁ h_r₁_sat
+    have ih₂ := ih₂ h_r₂ h_r₂_sat
+    exact ⟨BCNF_decompose_step_is_lossless h_X_vlt h_r h_sat, ⟨ih₁, ih₂⟩⟩
   | case4 R _ h_vlt => next h_X' =>
     obtain ⟨_, h_X'⟩ := (h_picker_valid (R := R)).resolve_left h_vlt
     simp_all
     contradiction
 
-theorem BCNF_decompose_is_lossless {R : Finset α} {F : Finset (FunctionalDependency α)}
-  {picker : Finset α → Option (Finset α)}
-  (h_picker_valid : is_picker_valid F picker) :
-  (BCNF_decompose R F picker).is_lossless F := by
-  exact DecompositionTree.is_lossless_imp (BCNF_decompose_is_lossless_syn h_picker_valid)
-
 @[
-  blueprint "definition:all-are-BCNF"
+  blueprint "thm:BCNF-decomp-lossless"
+  (title := /-- BCNF Decomposition: Losslessness -/)
+  (statement := /--
+    Using \cref{thm:decomp-tree-lossless-imp} as a bridge, we prove that the BCNF decomposition
+    algorithm is lossless (see \cref{def:decomp-tree-lossless}). That is, for any relation instance
+    $r$ with schema $R$ that satisfies the functional dependency set $F$, as we reconstruct from all
+    terminal sub-instances in the decomposition according to the tree structure, we always obtain
+    the original relation instance $r$.
+  -/)
 ]
-def all_are_BCNF {R : Finset α} (T : DecompositionTree R) (F : Finset (FunctionalDependency α)) : Prop :=
-  ∀ {L : Finset α}, L ∈ T.leaves → is_BCNF L F
+theorem BCNF_decompose_is_lossless {R : Finset α} {F : Finset (FunctionalDependency α)}
+  {picker : Finset α → Option (Finset α)} (h_picker_valid : is_picker_valid F picker) :
+  ∀ {r : RelationInstance α μ}, (h_r : r.schema = R) → (h_sat : r.sat_res_imp F) →
+  (BCNF_decompose R F picker).is_lossless h_r := by
+  intro r h_r h_sat
+  exact DecompositionTree.is_lossless_imp h_r (BCNF_decompose_is_lossless_syn h_picker_valid h_r h_sat)
 
 @[
-  blueprint "theorem:BCNF-decompose-leaves-are-BCNF"
+  blueprint "thm:BCNF-decompose-leaves-BCNF"
+  (title := /-- BCNF Decomposition: BCNF Compliance -/)
+  (statement := /--
+    All terminal sub-schemas (leaves) in the BCNF decomposition tree are in Boyce-Codd Normal Form
+    (BCNF) with respect to the functional dependency set $F$.
+  -/)
 ]
 theorem BCNF_decompose_leaves_are_BCNF {R : Finset α} {F : Finset (FunctionalDependency α)}
   {picker : Finset α → Option (Finset α)}
   (h_picker_valid : is_picker_valid F picker) :
-  all_are_BCNF (BCNF_decompose R F picker) F := by
+  ∀ {L : Finset α}, L ∈ (BCNF_decompose R F picker).leaves → is_BCNF L F := by
   induction R using BCNF_decompose.induct F picker with
   | case1 R vlts => next h_no_vlt =>
-    simp_all [vlts, all_are_BCNF, BCNF_decompose, DecompositionTree.leaves]
+    simp_all [vlts, BCNF_decompose, DecompositionTree.leaves]
     rw [← BCNF_iff_no_violators] at h_no_vlt
     trivial
   | case2 _ vlts h_vlt => next h_pick_none =>
@@ -393,17 +516,13 @@ theorem BCNF_decompose_leaves_are_BCNF {R : Finset α} {F : Finset (FunctionalDe
     obtain ⟨h_pick_X, _⟩ := h_picker_valid.resolve_left h_vlt
     simp_all
   | case3 _ vlts =>
-    rw [BCNF_decompose, all_are_BCNF]
+    rw [BCNF_decompose]
     simp_all [vlts]
     intro L h_L
     rw [DecompositionTree.leaves, Finset.mem_union] at h_L
     rcases h_L with h_L₁ | h_L₂
-    · next ih₁ _ =>
-      rw [all_are_BCNF] at ih₁
-      exact ih₁ h_L₁
-    · next ih₂ =>
-      rw [all_are_BCNF] at ih₂
-      exact ih₂ h_L₂
+    · next ih₁ _ => exact ih₁ h_L₁
+    · next ih₂ => exact ih₂ h_L₂
   | case4 R _ h_vlt => next h_X' =>
     obtain ⟨_, h_X'⟩ := (h_picker_valid (R := R)).resolve_left h_vlt
     simp_all

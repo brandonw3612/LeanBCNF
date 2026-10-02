@@ -757,6 +757,12 @@ def counterexample_relation (U S : Finset α) : RelationInstance α Bool where
 -/
 @[
   blueprint "lem:ctrex-sat"
+  (title := /-- Counterexample Relation Instance Satisfies FD Set -/)
+  (statement := /--
+    Given attribute sets $U$ and $S$, and a set of functional dependencies $F$ such that all FDs in
+    $F$ have their attributes contained in $U$, and $S$ is closed under $F$, then the counterexample
+    relation instance satisfies all FDs in $F$.
+  -/)
 ]
 lemma counterexample_sat {U S : Finset α} {F : Finset (FunctionalDependency α)}
   (h_F_sub_U : ∀ fd ∈ F, fd.lhs ⊆ U ∧ fd.rhs ⊆ U) (h_closed : S.is_closed_under F) :
@@ -794,6 +800,10 @@ lemma counterexample_sat {U S : Finset α} {F : Finset (FunctionalDependency α)
 /-- If the FD X -> Y holds on the counterexample relation instance, then Y must be a subset of S. -/
 @[
   blueprint "lem:subset-closure-if-fd-holds"
+  (statement := /--
+    If the functional dependency $X \to Y$ holds on the counterexample relation instance and
+    $X \subseteq S$, then $Y \subseteq S$.
+  -/)
 ]
 lemma subset_closure_if_holds {U X Y S : Finset α}
   (h_X_sub_S : X ⊆ S) (h_Y_sub_U : Y ⊆ U)
@@ -816,7 +826,14 @@ lemma subset_closure_if_holds {U X Y S : Finset α}
 
 /-- If F ⊢ X -> Y, then Y is a subset of the closure of X. -/
 @[
-  blueprint "theorem:attr-closure-impl-completeness"
+  blueprint "thm:attr-closure-impl-completeness"
+  (title := /-- Attribute Closure (Full Implementation Completeness) -/)
+  (statement := /--
+    The computed attribute closure is complete. Formally,
+    \[
+      F \vdash (X \to Y) \implies Y \subseteq X^+.
+    \]
+  -/)
 ]
 theorem attr_closure_complete {F : Finset (FunctionalDependency α)} {X Y : Finset α} :
   F ⊢ (X -> Y) → Y ⊆ attr_closure_impl F X := by
@@ -849,6 +866,14 @@ theorem attr_closure_complete {F : Finset (FunctionalDependency α)} {X Y : Fins
 /-- Completeness of Armstrong's Axioms: if F ⊨ f, then F ⊢ f. -/
 @[
   blueprint "theorem:armstrong-completeness"
+  (title := /-- Armstrong's Axioms Completeness -/)
+  (statement := /--
+    The Armstrong's Axioms are complete, \textit{i.e.}, any functional dependency implied by FD set
+    $F$ can be derived using Armstrong's Axioms. Formally,
+    \[
+      F \vDash f \implies F \vdash f.
+    \]
+  -/)
 ]
 theorem armstrong_complete {F : Finset (FunctionalDependency α)} {f : FunctionalDependency α} :
   F ⊨ f → F ⊢ f := by
@@ -893,9 +918,18 @@ theorem armstrong_complete {F : Finset (FunctionalDependency α)} {f : Functiona
   have h_Y_ref : F ⊢ (S -> Y) := Derives.rfl h_Y_sub_S
   exact Derives.trans h_S_sound h_Y_ref
 
-/-- Armstrong's axioms are correct, given their soundness and completeness. -/
+/-- Armstrong's axioms are correct, i.e., a functional dependency can be derived using Armstrong's
+    axioms if and only if it is implied by `F`. -/
 @[
-  blueprint "theorem:armstrong-correctness"
+  blueprint "thm:armstrong-correct"
+  (title := /-- Armstrong's Axioms Correctness -/)
+  (statement := /--
+    Armstrong's Axioms are correct, \textit{i.e.}, a functional dependency can be derived using
+    Armstrong's axioms if and only if it is implied by $F$:
+    \[
+      F \vdash f \Leftrightarrow F \vDash f.
+    \]
+  -/)
 ]
 theorem armstrong_correct {F : Finset (FunctionalDependency α)} {f : FunctionalDependency α} :
   F ⊢ f ↔ F ⊨ f := by
@@ -907,7 +941,11 @@ theorem armstrong_correct {F : Finset (FunctionalDependency α)} {f : Functional
     attribute closure.
 -/
 @[
-  blueprint "theorem:attr-closure-impl-correctness"
+  blueprint "thm:attr-clsr-impl-correct"
+  (title := /-- Attribute Closure Implementation Correctness -/)
+  (statement := /--
+    The computed attribute closure is equivalent to its weak definition.
+  -/)
 ]
 theorem attr_closure_impl_correct {F : Finset (FunctionalDependency α)} {X : Finset α} :
   attr_closure_impl F X = attr_closure_weak F X := by
@@ -923,31 +961,31 @@ theorem attr_closure_impl_correct {F : Finset (FunctionalDependency α)} {X : Fi
     rw [← Finset.singleton_subset_iff]
     exact attr_closure_complete (armstrong_complete h_x_in_attr_closure)
 
-/-- A strong definition of attribute closure, which is a finite set. -/
-@[
-  blueprint "definition:attr-closure-strong"
-]
-def attr_closure (F : Finset (FunctionalDependency α)) (X : Finset α) : Finset α :=
-  attr_closure_impl F X
-
-/-- Prove that the strong definition of attribute closure is equivalent to the weak definition via
-    the implementation.
--/
-@[
-  blueprint "theorem:attr-closure-strong-correctness"
-]
-theorem attr_closure_strong_correct {F : Finset (FunctionalDependency α)} {X : Finset α} :
-  attr_closure F X = attr_closure_weak F X := by
-  simp [attr_closure, attr_closure_impl_correct]
-
 @[
   blueprint "def:res-attr-clsr"
+  (title := /-- Restricted Attribute Closure -/)
+  (statement := /--
+    The attribute closure of an attribute set $X$ restricted to a universe of attributes $R$,
+    written as $X^+_R$, is the intersection of the attribute closure (\cref{def:attr-clsr-impl}) and
+    $R$. Formally,
+    \[
+      X^+_R = X^+ \cap R.
+    \]
+  -/)
 ]
 def res_attr_closure (F : Finset (FunctionalDependency α)) (X R : Finset α) : Finset α :=
   attr_closure_impl F X ∩ R
 
 @[
-  blueprint "theorem:subset-res-attr-clsr"
+  blueprint "thm:subset-res-attr-clsr"
+  (title := /-- Subset of Restricted Attribute Closure -/)
+  (statement := /--
+    If the input attribute set $X$ is a subset of the given attribute universe $R$, it is a subset
+    of its attribute closure restricted to $R$. Formally,
+    \[
+      X \subseteq R \implies X \subseteq X^+_R.
+    \]
+  -/)
 ]
 theorem subset_res_attr_closure {F : Finset (FunctionalDependency α)} {X R : Finset α} :
   X ⊆ R → X ⊆ res_attr_closure F X R := by
@@ -959,26 +997,16 @@ theorem subset_res_attr_closure {F : Finset (FunctionalDependency α)} {X R : Fi
 
 @[
   blueprint "thm:res-attr-clsr-subset"
+  (title := /-- Restricted Attribute Closure is Subset -/)
+  (statement := /--
+    The attribute closure of a set of attributes $X$ restricted to a universe of attributes $R$ is
+    the subset of $R$.
+  -/)
 ]
 theorem res_attr_closure_subset {F : Finset (FunctionalDependency α)} {X R : Finset α} :
   res_attr_closure F X R ⊆ R := by
   unfold res_attr_closure
   apply Finset.inter_subset_right
-
-/--
-  Application: Testing FDs
-  S -> T ∈ F⁺ **iff** T ⊆ S⁺.
--/
-theorem func_dep_valid_via_attr_closure {F : Finset (FunctionalDependency α)} {fd : FunctionalDependency α} :
-  F ⊨ fd ↔ fd.rhs ⊆ attr_closure F fd.lhs := by
-  simp [attr_closure]
-  set lc := attr_closure_impl F fd.lhs
-  rw [← armstrong_correct]
-  constructor
-  · exact attr_closure_complete
-  · intro h_t_subset_closure
-    apply Derives.trans attr_closure_sound
-    apply Derives.rfl h_t_subset_closure
 
 end NF
 
