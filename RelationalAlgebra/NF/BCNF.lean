@@ -433,28 +433,26 @@ decreasing_by
   · exact Finset.card_lt_card (R2_subset_R h_violator)
 
 @[
-  blueprint "thm:BCNF-decomp-lossless-syn"
+  blueprint "thm:BCNF-decomp-lossless-comp"
   (statement := /--
-    We prove that the BCNF decomposition algorithm is lossless syntactically (see
-    \cref{def:decomp-tree-lossless-syn}) by showing that all binary decomposition nodes throughout
+    We prove that the BCNF decomposition algorithm is compositionally lossless (see
+    \cref{def:decomp-tree-lossless-comp}) by showing that all binary decomposition nodes throughout
     the entire decomposition tree are lossless with respect to any relation instance $r$ with schema
     $R$ that satisfies the functional dependency set $F$.
   -/)
 ]
-theorem BCNF_decompose_is_lossless_syn {R : Finset α} {F : Finset (FunctionalDependency α)}
+theorem BCNF_decompose_is_lossless_comp {R : Finset α} {F : Finset (FunctionalDependency α)}
   {picker : Finset α → Option (Finset α)} (h_picker_valid : is_picker_valid F picker) :
   ∀ {r : RelationInstance α μ}, (h_r : r.schema = R) → (h_sat : r.sat_res_imp F) →
-  (BCNF_decompose R F picker).is_lossless_syn h_r := by
+  (BCNF_decompose R F picker).is_lossless_comp h_r := by
   intro r h_r h_sat
   induction R using BCNF_decompose.induct F picker generalizing r with
   | case1 _ vlts =>
-    unfold BCNF_decompose DecompositionTree.is_lossless_syn
-    simp_all [vlts]
+    simp_all [BCNF_decompose, DecompositionTree.is_lossless_comp, vlts]
   | case2 _ vlts =>
-    unfold BCNF_decompose DecompositionTree.is_lossless_syn
-    simp_all [vlts]
+    simp_all [BCNF_decompose, DecompositionTree.is_lossless_comp, vlts]
   | case3 R vlts _ X _ _ h_X_vlt R₁ R₂ => next ih₁ ih₂ =>
-    unfold BCNF_decompose DecompositionTree.is_lossless_syn
+    unfold BCNF_decompose DecompositionTree.is_lossless_comp
     simp_all [vlts, R₁, R₂]
     set t₁ := BCNF_decompose (res_attr_closure F X R) F picker
     set t₂ := BCNF_decompose ((R \ res_attr_closure F X R) ∪ X) F picker
@@ -492,7 +490,7 @@ theorem BCNF_decompose_is_lossless {R : Finset α} {F : Finset (FunctionalDepend
   ∀ {r : RelationInstance α μ}, (h_r : r.schema = R) → (h_sat : r.sat_res_imp F) →
   (BCNF_decompose R F picker).is_lossless h_r := by
   intro r h_r h_sat
-  exact DecompositionTree.is_lossless_imp h_r (BCNF_decompose_is_lossless_syn h_picker_valid h_r h_sat)
+  exact DecompositionTree.is_lossless_imp h_r (BCNF_decompose_is_lossless_comp h_picker_valid h_r h_sat)
 
 @[
   blueprint "thm:BCNF-decompose-leaves-BCNF"

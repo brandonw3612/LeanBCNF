@@ -143,14 +143,14 @@ def DecompositionTree.reconstruct {R : Finset α} {μ : Type}
     (t : DecompositionTree R) (r : RelationInstance α μ) (h_r : r.schema = R)
     : RelationInstance α μ :=
   match t with
-  | DecompositionTree.leaf _ => r
-  | DecompositionTree.node d left right =>
+  | leaf _ => r
+  | node d left right =>
     join (DecompositionTree.reconstruct left (d.left_instance h_r) (by simp [projection]))
          (DecompositionTree.reconstruct right (d.right_instance h_r) (by simp [projection]))
 
 @[
   blueprint "def:decomp-tree-lossless"
-  (title := /-- Decomposition Tree Losslessness -/)
+  (title := /-- Decomposition Tree Losslessness (Semantic) -/)
   (statement := /--
     A decomposition tree $t$ over a schema $R$ is lossless with respect to a relation instance $r$
     with schema $R$, if the original relation can be reconstructed by recursively joining the
@@ -162,44 +162,44 @@ def DecompositionTree.is_lossless {R : Finset α} {r : RelationInstance α μ} (
   r = t.reconstruct r h_r
 
 @[
-  blueprint "def:decomp-tree-lossless-syn"
-  (title := /-- Decomposition Tree Losslessness (Syntactic) -/)
+  blueprint "def:decomp-tree-lossless-comp"
+  (title := /-- Decomposition Tree Losslessness (Compositional) -/)
   (statement := /--
     With the tree structure and losslessness of a binary decomposition (\cref{def:decomp-lossless}),
-    we recursively define a syntactic notion of losslessness for a decomposition tree. If the tree
-    is a leaf, it is syntactically lossless trivially. If the tree is a node, it is lossless if the
+    we recursively define a compositional notion of losslessness for a decomposition tree. If the
+    tree is a leaf, it is lossless trivially. If the tree is a node, it is lossless if the
     decomposition at that node is lossless and both the left and right subtrees are also
-    syntactically lossless.
+    compositionally lossless.
   -/)
 ]
-def DecompositionTree.is_lossless_syn {R : Finset α} {r : RelationInstance α μ}
+def DecompositionTree.is_lossless_comp {R : Finset α} {r : RelationInstance α μ}
   (h_r : r.schema = R) (t : DecompositionTree R) : Prop :=
   match t with
   | .leaf _ => True
   | .node d left right =>
     have h_sl : (d.left_instance h_r).schema = d.left := by simp [projection]
     have h_sr : (d.right_instance h_r).schema = d.right := by simp [projection]
-    d.is_lossless h_r ∧ left.is_lossless_syn h_sl ∧ right.is_lossless_syn h_sr
+    d.is_lossless h_r ∧ left.is_lossless_comp h_sl ∧ right.is_lossless_comp h_sr
 
 @[
   blueprint "thm:decomp-tree-lossless-imp"
   (title := /-- Decomposition Tree Losslessness Implication -/)
   (statement := /--
-    If a decomposition tree is syntactically lossless with respect to a relation instance, then
-    it is also semantically lossless. This theorem establishes the connection between the syntactic
-    definition of losslessness and the semantic notion of losslessness, ensuring that if the
-    syntactic conditions are satisfied, the original relation can indeed be reconstructed from the
-    projections defined by the decomposition tree.
+    If a decomposition tree is compositionally lossless with respect to a relation instance, then
+    it is also semantically lossless. This theorem establishes the connection between the
+    compositional definition of losslessness and the semantic notion of losslessness, ensuring that
+    if the compositional conditions are satisfied, the original relation can indeed be reconstructed
+    from the projections defined by the decomposition tree.
   -/)
 ]
 theorem DecompositionTree.is_lossless_imp {R : Finset α} {r : RelationInstance α μ}
   (h_r : r.schema = R) {t : DecompositionTree R} :
-  t.is_lossless_syn h_r → t.is_lossless h_r := by
+  t.is_lossless_comp h_r → t.is_lossless h_r := by
   induction t generalizing r with
   | leaf R =>
-    simp_all [DecompositionTree.is_lossless, DecompositionTree.reconstruct, DecompositionTree.is_lossless_syn]
+    simp_all [DecompositionTree.is_lossless, DecompositionTree.reconstruct, DecompositionTree.is_lossless_comp]
   | node d left right ih_left ih_right => next R =>
-    rw [DecompositionTree.is_lossless, DecompositionTree.is_lossless_syn]
+    rw [DecompositionTree.is_lossless, DecompositionTree.is_lossless_comp]
     intro ⟨h_d, h_left, h_right⟩
     unfold Decomposition.is_lossless at h_d
     set r_left := d.left_instance h_r
